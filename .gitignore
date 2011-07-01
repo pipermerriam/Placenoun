@@ -9,6 +9,8 @@ Thumbs.db
 *.old
 *~
 *#
+passenger_wsgi.py
+public/
 /config/fbmvc.config.php
 /tmp/*
 /com/fusionbox/mvc/model/sql/*
