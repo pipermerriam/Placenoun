@@ -31,12 +31,12 @@ class Noun(TimeStampable):
     abstract = True
 
 class NounImage(Noun):
-  image = models.ImageField(upload_to="nouns/%Y/%m/%d")
-  aspect_width = models.IntegerField()
-  aspect_height = models.IntegerField()
-  width = models.IntegerField()
-  height = models.IntegerField()
-  image_hash = models.CharField(max_length = 256)
+  image = models.ImageField(upload_to="nouns/%Y/%m/%d", null = True)
+  aspect_width = models.IntegerField(null = True)
+  aspect_height = models.IntegerField(null = True)
+  width = models.IntegerField(null = True)
+  height = models.IntegerField(null = True)
+  image_hash = models.CharField(max_length = 256, null = True)
 
   class Meta:
     abstract = True
@@ -44,9 +44,9 @@ class NounImage(Noun):
 class NounImageExternal(NounImage):
   url = models.URLField(verify_exists = False)
 
-  def populate():
+  def populate(self):
     file = get_file_from_url(self.url)
-    self.image = file
+    self.image = File(file)
 
 class Search(TimeStampable):
   last_searched = models.DateTimeField()
@@ -120,11 +120,9 @@ class SearchGoogle(Search):
 
     # Iterate through the results and create blank image objects.
     for result in data['responseData']['results']:
-      if Image.objects.filter(image_hash = img_hash).exists():
-        continue
-
       new_image = NounImageExternal.objects.create(
         url = result['url'],
+        text = self.query,
         )
 
     return True
