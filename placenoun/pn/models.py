@@ -13,15 +13,62 @@ from placenoun.behaviors.models import *
 API_KEY = settings.API_KEY
 IMAGE_SIZE_CHOICES = ('icon', 'small', 'medium', 'large', 'xlarge', 'xxlarge', 'huge')
 
-# Create your models here.
 class Noun(TimeStampable):
-  text = models.CharField(max_length = 100)
+  text = models.CharField(max_length = 100s
+  sfw = models.NullBooleanField(default = None)
 
+  @property
+  def nsfw():
+    if sfw == False:
+      return True
+    elif sfw == True:
+      return False
+    else:
+      return None
+
+  class Meta:
+    abstract = True
+
+class NounImage(Noun):
+  image = models.ImageField()
+  aspect_width = models.IntegerField()
+  aspect_height = models.IntegerField()
+  width = models.IntegerField()
+  height = models.IntegerField()
+  image_hash = models.CharField(max_length = 256)
+
+  class Meta:
+    abstract = True
+
+class NounImageExternal(NounImage)
+  url = models.Url(verify_exists = False)
+
+  def populate():
+ 
 class Search(TimeStampable):
-  noun = models.ForeignKey(Noun)
   last_searched = models.DateTimeField()
+  has_results = models.NullBooleanField(default = None)
+  query = models.SlugField()
+
+  # Default search properties
+  # @shazam: executes the search.  False says on results were found
+  # @is_final: says that there are no more permutations to be executed
+  # @next_permutation: relates to is_final stating that there is no other
+  # search permuation to be executed
+  @property
+  def shazam():
+    return False
+
+  @property
+  def is_final()
+    return True
+
+  @property
+  def next_permutation()
+    return False
+
+class SearchGoogle(Search):
   response_code = models.CharField(max_length = 100)
-  results = models.IntegerField()
   query = models.CharField(max_length = 64)
   imgsz = models.CharField(max_length = 10)
   restrict = models.CharField(max_length = 32)
@@ -44,49 +91,37 @@ class Search(TimeStampable):
 
     return urllib.urlencode(params)
 
-  def doit(self, raw = False):
+  # Executes the search.
+  def shazam(self, raw = False):
     url = ('https://ajax.googleapis.com/ajax/services/search/images?' + self.params)
   
     request = urllib2.Request(url, None, {'Referer': 'http://www.placenoun.com/'})
     response = urllib2.urlopen(request)
     
     data = simplejson.load(response)
+
+    # Allows the return of the raw google json data
     if raw:
       return data
 
+    # Checks to be sure that we received a 200 response code.
     self.response = data['responseStatus']
     if not self.response == 200:
       self.save()
       return False
 
-    self.results = len(data['responseData']['results'])
-    if not self.results:
+    # If there are zero results for the search. return False.
+    self.has_results = len(data['responseData']['results'])
+    if not self.has_results:
       self.save()
       return False
 
-    if not self.noun:
-      self.noun, created = Noun.objects.get_or_create(text = self.query)
-
+    # Iterate through the results and create blank image objects.
     for result in data['responseData']['results']:
-      img = urllib2.open(result['url'])
-      temp = tempfile.NameTemporaryFile(suffix = '.' + img.url.split('.').pop())
-
-      while True:
-        buf = img.read(1024)
-        if buf:
-          temp.write(buf)
-          continue
-        break
-
-      img_hash = hash_file(temp)
-
       if Image.objects.filter(image_hash = img_hash).exists():
         continue
 
       new_image = Image.objects.create(
-        noun = self.noun,
-        search = self,
-        image = File(temp),
         width = result['width'],
         height = result['height'],
         image_hash = img_hash,
@@ -96,40 +131,3 @@ class Search(TimeStampable):
         )
 
     return True
-
-def get_image_from_url(url):
-  url_response = urllib2.urlopen(url)
-  temp = tempfile.NamedTemporaryFile(suffix = '.' + url_response.url.split('.').pop())
-
-  while True:
-    buf = url_response.read(1024)
-    if buf:
-      temp.write(buf)
-      continue
-    break
-  return temp
-  
-def hash_file(file):
-  file.seek(0)
-  hasher = hashlib.sha256()
-  while True:
-    buf = file.read(1024)
-    if buf:
-      hasher.update(buf)
-      continue
-    break
-  return hasher.hexdigest()
-
-
-class Image(TimeStampable):
-  noun = models.ForeignKey(Noun)
-  search = models.ForeignKey(Search)
-  image = models.ImageField()
-  width = models.IntegerField()
-  height = models.IntegerField()
-  image_hash = models.CharField(max_length = 64)
-  image_id = models.CharField(max_length = 20)
-  url = models.URLField()
-  unescapedUrl = models.URLField()
-
-  last_seen = models.DateTimeField()

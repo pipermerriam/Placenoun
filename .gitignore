@@ -27,4 +27,5 @@ public/
 /mail/
 /.ifb_history
 placenoun/site_settings.py
+placenoun/site-settings.py
 placenoun/apache/

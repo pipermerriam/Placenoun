@@ -18,13 +18,11 @@ def index(request)
   return render_to_response(template, data, context)
 
 def noun(request, noun):
-  this_noun, created = Noun.objects.get_or_create(text = noun)
+  template = 'noun.html'
+  data = {}
   
-  if not Image.objects.filter(noun = this_noun).exists():
-    pass
-  
-  
-  if not
+  context = RequestContext(request)
+  return render_to_response(template, data, context)
 
 def search(request, noun)
   params = {}
