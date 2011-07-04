@@ -49,7 +49,7 @@ class NounImageExternal(NounImage):
     self.image = File(file)
 
 class Search(TimeStampable):
-  last_searched = models.DateTimeField()
+  last_searched = models.DateTimeField(null = True)
   has_results = models.NullBooleanField(default = None)
   query = models.SlugField()
 
@@ -72,11 +72,11 @@ class Search(TimeStampable):
 
 class SearchGoogle(Search):
   response_code = models.CharField(max_length = 100)
-  imgsz = models.CharField(max_length = 10)
-  restrict = models.CharField(max_length = 32)
-  filetype = models.CharField(max_length = 10)
-  rights = models.CharField(max_length = 32)
-  site = models.CharField(max_length = 100)
+  imgsz = models.CharField(max_length = 10, null = True)
+  restrict = models.CharField(max_length = 32, null = True)
+  filetype = models.CharField(max_length = 10, null = True)
+  rights = models.CharField(max_length = 32, null = True)
+  site = models.CharField(max_length = 100, null = True)
 
   @property
   def params(self):

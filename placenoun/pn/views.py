@@ -2,15 +2,14 @@ import urllib2
 import urllib
 import simplejson
 
-from django.conf.settings import API_KEY
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 
 from django.http import HttpResponse
 
-from placenoun.pn.models import Noun, Image
+from placenoun.pn.models import NounImageExternal, SearchGoogle
 
-def index(request)
+def index(request):
   template = 'index.html'
   data = {}
 
@@ -21,10 +20,21 @@ def noun(request, noun):
   template = 'noun.html'
   data = {}
   
-  context = RequestContext(request)
-  return render_to_response(template, data, context)
+  if not NounImageExternal.objects.filter(text = noun).exists():
+    new_search = SearchGoogle()
+    new_search.query = noun
+    if not new_search.shazam():
+      context = RequestContext(request)
+      return render_to_response(template, data, context)
+  this_image = NounImageExternal.objects.filter(text = noun)[0]
+  image = this_image.image.open('r')
+  response = HttpResponse(image, mimetype='image/jpg')
+  response['Content-Disposition'] = 'attachment; filename=%s'%image
+  return response
 
-def search(request, noun)
+
+
+def search(request, noun):
   params = {}
   params['v'] = '1.0'
   if API_KEY:

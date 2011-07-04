@@ -7,7 +7,7 @@ from django.conf.urls.defaults import patterns, include, url
 urlpatterns = patterns('',
     # Examples:
 
-    (r'^(?P<noun>[a-zA-Z+]+)/$', 'placenoun.pn.views.get_noun'),
+    (r'^(?P<noun>[a-zA-Z+]+)/$', 'placenoun.pn.views.noun'),
     # url(r'^$', 'placenoun.views.home', name='home'),
     # url(r'^placenoun/', include('placenoun.foo.urls')),
 
