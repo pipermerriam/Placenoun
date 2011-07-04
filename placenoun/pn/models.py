@@ -8,13 +8,14 @@ from django.core.files import File
 from django.conf import settings
 from django.db import models
 
-from placenoun.behaviors.models import * 
+from placenoun.behaviors.models import *
+from placenoun.fileutilities.main import *
 
 API_KEY = settings.API_KEY
 IMAGE_SIZE_CHOICES = ('icon', 'small', 'medium', 'large', 'xlarge', 'xxlarge', 'huge')
 
 class Noun(TimeStampable):
-  text = models.CharField(max_length = 100s
+  text = models.CharField(max_length = 100)
   sfw = models.NullBooleanField(default = None)
 
   @property
@@ -30,7 +31,7 @@ class Noun(TimeStampable):
     abstract = True
 
 class NounImage(Noun):
-  image = models.ImageField()
+  image = models.ImageField(upload_to="nouns/%Y/%m/%d")
   aspect_width = models.IntegerField()
   aspect_height = models.IntegerField()
   width = models.IntegerField()
@@ -40,11 +41,13 @@ class NounImage(Noun):
   class Meta:
     abstract = True
 
-class NounImageExternal(NounImage)
-  url = models.Url(verify_exists = False)
+class NounImageExternal(NounImage):
+  url = models.URLField(verify_exists = False)
 
   def populate():
- 
+    file = get_file_from_url(self.url)
+    self.image = file
+
 class Search(TimeStampable):
   last_searched = models.DateTimeField()
   has_results = models.NullBooleanField(default = None)
@@ -60,16 +63,15 @@ class Search(TimeStampable):
     return False
 
   @property
-  def is_final()
+  def is_final():
     return True
 
   @property
-  def next_permutation()
+  def next_permutation():
     return False
 
 class SearchGoogle(Search):
   response_code = models.CharField(max_length = 100)
-  query = models.CharField(max_length = 64)
   imgsz = models.CharField(max_length = 10)
   restrict = models.CharField(max_length = 32)
   filetype = models.CharField(max_length = 10)
@@ -121,13 +123,8 @@ class SearchGoogle(Search):
       if Image.objects.filter(image_hash = img_hash).exists():
         continue
 
-      new_image = Image.objects.create(
-        width = result['width'],
-        height = result['height'],
-        image_hash = img_hash,
-        image_id = result['imageId'],
+      new_image = NounImageExternal.objects.create(
         url = result['url'],
-        unescapedUrl = result['unescapedUrl']
         )
 
     return True
