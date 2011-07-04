@@ -1,0 +1,21 @@
+Placenoun is a Django project aimed at combining the utility of
+http://www.placekitten.com with the generality of http://www.fuckyeahnouns.com
+
+Placekitten allows you to construct a url in this format
+
+http://www.placekittne.com/<width>/<height>/
+
+So, typing in http://www.placekitten.com/100/200/ will result in 
+placekitten serving you with a 100 pixel by 200 pixel image of a kitten.
+
+FuckYeahNouns uses the Yahoo search api allowing you to type in a noun
+and then be served with an image of that noun with the words "Fuck Yeah <noun>"
+overlayed on top of it.
+
+Placenoun is meant to combine these two concepts.  At placenoun
+you will construct a url in this format.
+
+http://www.placenoun.com/<noun>/<width>/<height>/
+
+And you will be served with an image of that noun of width and height
+specified.
