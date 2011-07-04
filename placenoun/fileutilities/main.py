@@ -1,5 +1,6 @@
 # File Utilities
 import urllib2
+import hashlib
 
 # Takes a url and returns a file object
 def get_file_from_url(url):
