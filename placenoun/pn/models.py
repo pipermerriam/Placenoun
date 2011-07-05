@@ -6,8 +6,10 @@ import datetime
 import mimetypes
 import tempfile
 
-from fractions import gcd
-from PIL import Image
+try:
+  from fractions import gcd
+except ImportError:
+  from placenoun.numberutilities.main import gcd
 
 from django.core.files import File
 from django.conf import settings
