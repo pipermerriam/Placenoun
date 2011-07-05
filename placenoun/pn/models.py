@@ -95,6 +95,9 @@ class NounImageExternal(NounImage):
 
   @property
   def static(self, size = None):
+    if not self.image:
+      if not self.populate():
+        return False
     this_static_noun, created = NounStatic.objects.get_or_create(parent = self, text = self.text, sfw = self.sfw)
     x = this_static_noun.parent
     if not created:
@@ -127,6 +130,7 @@ class Search(TimeStampable):
   last_searched = models.DateTimeField(null = True)
   has_results = models.NullBooleanField(default = None)
   query = models.SlugField()
+  base = models.BooleanField(default = False)
 
   # Default search properties
   # @shazam: executes the search.  False says on results were found
@@ -147,6 +151,9 @@ class Search(TimeStampable):
 
 class SearchGoogle(Search):
   response_code = models.CharField(max_length = 100)
+  result_count = models.IntegerField(default = 0)
+  page = models.IntegerField(default = 0)
+  page_size = models.IntegerField(default = 8)
   imgsz = models.CharField(max_length = 10, default = '')
   restrict = models.CharField(max_length = 32, default = '')
   filetype = models.CharField(max_length = 10, default = '')
@@ -160,6 +167,9 @@ class SearchGoogle(Search):
     if API_KEY:
       params['key'] = API_KEY
     params['q'] = self.query
+    params['rsz'] = self.page_size
+    if self.result_count > self.page * self.page_size:
+      params['start'] = self.page * self.page_size
     params['imgsz'] = self.imgsz
     params['restrict'] = self.restrict
     params['as_filetype'] = self.filetype
@@ -167,6 +177,13 @@ class SearchGoogle(Search):
     params['as_sitesearch'] = self.site
 
     return urllib.urlencode(params)
+
+  @property
+  def next_permuation(self):
+    next_search, created = SearchGoogle.objects.get_or_create(
+      query = self.query,
+      page = self.page + 1)
+    return next_search
 
   # Executes the search.
   def shazam(self, raw = False):
@@ -188,15 +205,21 @@ class SearchGoogle(Search):
       return False
 
     # If there are zero results for the search. return False.
-    self.has_results = len(data['responseData']['results'])
+    self.has_results = bool(len(data['responseData']['results']))
     if not self.has_results:
       self.save()
       return False
+
+    self.result_count = int(data['responseData']['cursor']['estimatedResultCount'])
+    self.last_searched = datatime.datetime.now()
+    self.save()
 
     # Iterate through the results and create blank image objects.
     for result in data['responseData']['results']:
       new_image = NounImageExternal.objects.create(
         url = result['url'],
+        width = result['width'],
+        height = result['height'],
         text = self.query,
         )
 

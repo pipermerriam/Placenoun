@@ -25,7 +25,17 @@ def noun_static(request, noun, width, height):
   noun_query = NounImageExternal.objects.filter(text = noun, width = width, height = height)
   if noun_query.exists():
     this_image = noun_query.get().static
-    return this_image.http_image
+    if this_image:
+      return this_image.http_image
+
+  search_obj, created = SearchGoogle.objects.get_or_create(query = noun)
+  while True:
+    noun_query = NounImageExternal.objects.filter(text = noun, width = width, height = height)
+    if noun_query.exists():
+      this_image = noun_query.get().static
+      if this_image:
+        return this_image.http_image
+    if search_obj.
 
 def noun(request, noun, width = None, height = None):
   if not NounImageExternal.objects.filter(text = noun).exists():
@@ -37,25 +47,3 @@ def noun(request, noun, width = None, height = None):
   this_image = NounImageExternal.objects.filter(text = noun)[0]
 
   return this_image.http_image
-
-
-
-def search(request, noun):
-  params = {}
-  params['v'] = '1.0'
-  if API_KEY:
-    params['key'] = api_key
-  params['q'] = noun
-  
-  params['imgsz'] = 'huge'
-
-  url = ('https://ajax.googleapis.com/ajax/services/search/images?' +
-    urllib.urlencode(params))
-
-  request = urllib2.Request(url, None, {'Referer': 'http://www.placenoun.com/'})
-  response = urllib2.urlopen(request)
-  
-  data = simplejson.load(response)
-  src = data['responseData']['results'][0]['url']
-
-  return HttpResponse('<img src="%s">'%src)
