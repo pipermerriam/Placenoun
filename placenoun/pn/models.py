@@ -5,6 +5,7 @@ import simplejson
 import datetime
 import mimetypes
 import tempfile
+import shutil
 
 from PIL import Image
 
@@ -17,6 +18,7 @@ from django.core.files import File
 from django.conf import settings
 from django.db import models
 from django.http import HttpResponse, Http404
+from django.template.defaultfilters import slugify
 
 from placenoun.behaviors.models import *
 from placenoun.fileutilities.main import *
@@ -29,19 +31,17 @@ class Noun(TimeStampable):
   sfw = models.NullBooleanField(default = None)
 
   @property
-  def nsfw():
-    if sfw == False:
-      return True
-    elif sfw == True:
-      return False
-    else:
-      return None
+  def slug(self):
+    return slugify(self.text)
 
   class Meta:
     abstract = True
 
+def upload_path(instance, filename):
+  return '/'.join([instance.slug, datetime.datetime.now().strftime('%Y/%m/%d'), os.path.basename(filename)])
+
 class NounImage(Noun):
-  image = models.ImageField(upload_to="nouns/%Y/%m/%d", null = True)
+  image = models.ImageField(upload_to=upload_path, null = True)
   extension = models.CharField(max_length = 32, null = True)
   mime_type = models.CharField(max_length = 32, null = True)
   aspect_width = models.IntegerField(null = True)
@@ -53,14 +53,28 @@ class NounImage(Noun):
   class Meta:
     abstract = True
 
+  def set_image_properties(self):
+    if not self.image:
+      return False
+    self.width = self.image.width
+    self.height = self.image.height
+    aspect_gcd = gcd(self.width, self.height)
+    self.aspect_width = self.width/aspect_gcd
+    self.aspect_height = self.height/aspect_gcd
+    self.image_hash = hash_file(this_image)
+    self.extension = os.path.splitext(self.image.path)[1]
+    self.mime_type = mimetypes.types_map[self.extension]
+    self.save()
+    return True
+
+
   @property
   def http_image(self):
     if not self.image:
       if not self.populate():
         return Http404
-    pil_image = Image.open(self.image.path)
-    response = HttpResponse(mimetype = self.mime_type)
-    pil_image.save(response, self.extension.strip('.'))
+    this_image = open(self.image.path)
+    response = HttpResponse(content = this_image, mimetype = self.mime_type)
     
     return response
 
@@ -73,17 +87,34 @@ class NounImageExternal(NounImage):
     if this_image:
       self.image = File(this_image)
       self.save()
-      self.width = self.image.width
-      self.height = self.image.height
-      aspect_gcd = gcd(self.width, self.height)
-      self.aspect_width = self.width/aspect_gcd
-      self.aspect_height = self.height/aspect_gcd
-      self.image_hash = hash_file(this_image)
-      self.extension = os.path.splitext(self.image.path)[1]
-      self.mime_type = mimetypes.types_map[self.extension]
-      self.save()
-      return True
+      if self.set_image_properties():
+        return True
     return False
+
+  @property
+  def static(self, size = None):
+    this_static_noun, created = NounStatic.objects.get_or_create(parent = self)
+    if not created:
+      return this_static_noun
+    dst_file = tempfile.NamedTemporaryFile(suffix = self.extension)
+
+    # Handle resizing if needed
+    if size:
+      src_img = Image.open(self.image.path, 'r')
+      new_image = src_img.resize(size)
+      new_image.save(dst_file)
+    else:
+      shutil.copyfile(self.image.path, dst_file)
+
+    this_static_noun.image = File(dst_file)
+    self.save()
+    if this_static_noun.set_image_properties():
+      return this_static_noun
+    return False
+    
+
+class NounStatic(NounImage):
+  parent = models.ForeignKey(NounImageExternal)
 
 class Search(TimeStampable):
   last_searched = models.DateTimeField(null = True)
