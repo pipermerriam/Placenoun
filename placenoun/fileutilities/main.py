@@ -1,13 +1,18 @@
 # File Utilities
 import urllib2
 import hashlib
+import os
 
 # Takes a url and returns a file object
 def get_file_from_url(url):
   import tempfile
 
   url_response = urllib2.urlopen(url)
-  temp = tempfile.NamedTemporaryFile(suffix = '.' + url_response.url.split('.').pop())
+  extension = os.path.splitext(url)[1]
+  if extension == '.jpg':
+    extension = '.jpeg'
+
+  temp = tempfile.NamedTemporaryFile(suffix = extension )
 
   while True:
     buf = url_response.read(1024)

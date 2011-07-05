@@ -1,12 +1,18 @@
 import urllib
 import urllib2
+import os
 import simplejson
 import datetime
+import mimetypes
 import tempfile
+
+from fractions import gcd
+from PIL import Image
 
 from django.core.files import File
 from django.conf import settings
 from django.db import models
+from django.http import HttpResponse, Http404
 
 from placenoun.behaviors.models import *
 from placenoun.fileutilities.main import *
@@ -32,6 +38,8 @@ class Noun(TimeStampable):
 
 class NounImage(Noun):
   image = models.ImageField(upload_to="nouns/%Y/%m/%d", null = True)
+  extension = models.CharField(max_length = 32, null = True)
+  mime_type = models.CharField(max_length = 32, null = True)
   aspect_width = models.IntegerField(null = True)
   aspect_height = models.IntegerField(null = True)
   width = models.IntegerField(null = True)
@@ -41,12 +49,37 @@ class NounImage(Noun):
   class Meta:
     abstract = True
 
+  @property
+  def http_image(self):
+    if not self.image:
+      if not self.populate():
+        return Http404
+    pil_image = Image.open(self.image.path)
+    response = HttpResponse(mimetype = self.mime_type)
+    pil_image.save(response, self.extension.strip('.'))
+    
+    return response
+
+
 class NounImageExternal(NounImage):
   url = models.URLField(verify_exists = False)
 
   def populate(self):
-    file = get_file_from_url(self.url)
-    self.image = File(file)
+    this_image = get_file_from_url(self.url)
+    if this_image:
+      self.image = File(this_image)
+      self.save()
+      self.width = self.image.width
+      self.height = self.image.height
+      aspect_gcd = gcd(self.width, self.height)
+      self.aspect_width = self.width/aspect_gcd
+      self.aspect_height = self.height/aspect_gcd
+      self.image_hash = hash_file(this_image)
+      self.extension = os.path.splitext(self.image.path)[1]
+      self.mime_type = mimetypes.types_map[self.extension]
+      self.save()
+      return True
+    return False
 
 class Search(TimeStampable):
   last_searched = models.DateTimeField(null = True)
@@ -72,11 +105,11 @@ class Search(TimeStampable):
 
 class SearchGoogle(Search):
   response_code = models.CharField(max_length = 100)
-  imgsz = models.CharField(max_length = 10, null = True)
-  restrict = models.CharField(max_length = 32, null = True)
-  filetype = models.CharField(max_length = 10, null = True)
-  rights = models.CharField(max_length = 32, null = True)
-  site = models.CharField(max_length = 100, null = True)
+  imgsz = models.CharField(max_length = 10, default = '')
+  restrict = models.CharField(max_length = 32, default = '')
+  filetype = models.CharField(max_length = 10, default = '')
+  rights = models.CharField(max_length = 32, default = '')
+  site = models.CharField(max_length = 100, default = '')
 
   @property
   def params(self):

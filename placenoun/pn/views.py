@@ -27,10 +27,8 @@ def noun(request, noun):
       context = RequestContext(request)
       return render_to_response(template, data, context)
   this_image = NounImageExternal.objects.filter(text = noun)[0]
-  image = this_image.image.open('r')
-  response = HttpResponse(image, mimetype='image/jpg')
-  response['Content-Disposition'] = 'attachment; filename=%s'%image
-  return response
+
+  return this_image.http_image
 
 
 
