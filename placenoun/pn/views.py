@@ -7,7 +7,7 @@ from django.template import RequestContext
 
 from django.http import HttpResponse
 
-from placenoun.pn.models import NounImageExternal, SearchGoogle
+from placenoun.pn.models import NounStatic, NounImageExternal, SearchGoogle
 
 def index(request):
   template = 'index.html'
@@ -16,10 +16,18 @@ def index(request):
   context = RequestContext(request)
   return render_to_response(template, data, context)
 
-def noun(request, noun):
-  template = 'noun.html'
-  data = {}
-  
+def noun_static(request, noun, width, height):
+  noun_query = NounStatic.objects.filter(text = noun, width = width, height = height)
+  if noun_query.exists():
+    this_image = noun_query.get()
+    return this_image.http_image
+
+  noun_query = NounImageExternal.objects.filter(text = noun, width = width, height = height)
+  if noun_query.exists():
+    this_image = noun_query.get().static
+    return this_image.http_image
+
+def noun(request, noun, width = None, height = None):
   if not NounImageExternal.objects.filter(text = noun).exists():
     new_search = SearchGoogle()
     new_search.query = noun

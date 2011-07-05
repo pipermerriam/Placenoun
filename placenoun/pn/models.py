@@ -61,7 +61,9 @@ class NounImage(Noun):
     aspect_gcd = gcd(self.width, self.height)
     self.aspect_width = self.width/aspect_gcd
     self.aspect_height = self.height/aspect_gcd
-    self.image_hash = hash_file(this_image)
+    self.image.open('r')
+    self.image_hash = hash_file(self.image.file)
+    self.image.close()
     self.extension = os.path.splitext(self.image.path)[1]
     self.mime_type = mimetypes.types_map[self.extension]
     self.save()
@@ -73,8 +75,8 @@ class NounImage(Noun):
     if not self.image:
       if not self.populate():
         return Http404
-    this_image = open(self.image.path)
-    response = HttpResponse(content = this_image, mimetype = self.mime_type)
+    self.image.open('r')
+    response = HttpResponse(content = self.image.file, mimetype = self.mime_type)
     
     return response
 
@@ -93,28 +95,33 @@ class NounImageExternal(NounImage):
 
   @property
   def static(self, size = None):
-    this_static_noun, created = NounStatic.objects.get_or_create(parent = self)
+    this_static_noun, created = NounStatic.objects.get_or_create(parent = self, text = self.text, sfw = self.sfw)
+    x = this_static_noun.parent
     if not created:
       return this_static_noun
     dst_file = tempfile.NamedTemporaryFile(suffix = self.extension)
 
     # Handle resizing if needed
     if size:
-      src_img = Image.open(self.image.path, 'r')
+      self.image.open('r')
+      src_img = Image.open(self.image.file, 'r')
+      self.image.close()
       new_image = src_img.resize(size)
       new_image.save(dst_file)
     else:
-      shutil.copyfile(self.image.path, dst_file)
+      self.image.open('r')
+      shutil.copyfileobj(self.image.file, dst_file)
+      self.image.close()
 
     this_static_noun.image = File(dst_file)
-    self.save()
+    this_static_noun.save()
     if this_static_noun.set_image_properties():
       return this_static_noun
     return False
     
 
 class NounStatic(NounImage):
-  parent = models.ForeignKey(NounImageExternal)
+  parent = models.ForeignKey(NounImageExternal, unique = True)
 
 class Search(TimeStampable):
   last_searched = models.DateTimeField(null = True)
