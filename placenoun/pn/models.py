@@ -6,6 +6,8 @@ import datetime
 import mimetypes
 import tempfile
 
+from PIL import Image
+
 try:
   from fractions import gcd
 except ImportError:
