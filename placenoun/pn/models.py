@@ -56,7 +56,8 @@ class NounBase(TimeStampable):
     image_hash = hash_file(self.image.file)
     self.image.close()
     if type(self).objects.filter(image_hash = image_hash).exists():
-      self.delete()
+      self.available = False
+      self.save()
       return False
     self.image_hash = image_hash
 
@@ -70,7 +71,8 @@ class NounBase(TimeStampable):
         self.image.close()
         pass
       else:
-        self.delete()
+        self.available = False
+        self.save()
         return False
     self.mimetype = mimetypes.types_map[self.extension]
 
@@ -108,7 +110,8 @@ class NounExternal(NounBase):
       self.image = File(this_image)
       self.save()
       return self.set_image_properties()
-    self.delete()
+    self.available = False
+    self.save()
     return False
 
   def to_static(self, size = None):
