@@ -7,6 +7,7 @@ import mimetypes
 import tempfile
 import shutil
 
+from decimal import Decimal
 from PIL import Image
 
 try:
@@ -19,33 +20,24 @@ from django.conf import settings
 from django.db import models
 from django.http import HttpResponse, Http404
 from django.template.defaultfilters import slugify
+from django.db.models.signals import post_init
 
 from placenoun.behaviors.models import *
 from placenoun.fileutilities.main import *
 
 API_KEY = settings.API_KEY
-IMAGE_SIZE_CHOICES = ('icon', 'small', 'medium', 'large', 'xlarge', 'xxlarge', 'huge')
-
-class Noun(TimeStampable):
-  text = models.CharField(max_length = 100)
-  sfw = models.NullBooleanField(default = None)
-
-  @property
-  def slug(self):
-    return slugify(self.text)
-
-  class Meta:
-    abstract = True
 
 def upload_path(instance, filename):
   return '/'.join([instance.slug, datetime.datetime.now().strftime('%Y/%m/%d'), os.path.basename(filename)])
 
-class NounImage(Noun):
+class NounBase(TimeStampable):
+  noun = models.CharField(max_length = 100)
+  nsfw = models.NullBooleanField(default = None)
+
   image = models.ImageField(upload_to=upload_path, null = True)
   extension = models.CharField(max_length = 32, null = True)
-  mime_type = models.CharField(max_length = 32, null = True)
-  aspect_width = models.IntegerField(null = True)
-  aspect_height = models.IntegerField(null = True)
+  mimetype = models.CharField(max_length = 32, null = True)
+  aspect = models.DecimalField(max_digits = 19, decimal_places=10, null = True)
   width = models.IntegerField(null = True)
   height = models.IntegerField(null = True)
   image_hash = models.CharField(max_length = 256, null = True)
@@ -53,55 +45,83 @@ class NounImage(Noun):
   class Meta:
     abstract = True
 
+  @property
+  def slug(self):
+    return slugify(self.noun.replace('+',' '))
+
   def set_image_properties(self):
     if not self.image:
       return False
+    self.image.open('r')
+    image_hash = hash_file(self.image.file)
+    self.image.close()
+    if type(self).objects.filter(image_hash = image_hash).exists():
+      self.delete()
+      return False
+    self.image_hash = image_hash
+
+    self.extension = os.path.splitext(self.image.path)[1]
+    if self.extension.lower() == '.gif':
+      self.image.open('r')
+      pil_image = Image.open(self.image.file)
+      try:
+        pil_image.seek(1)
+      except EOFError:
+        self.image.close()
+        pass
+      else:
+        self.delete()
+        return False
+    self.mimetype = mimetypes.types_map[self.extension]
+
     self.width = self.image.width
     self.height = self.image.height
-    aspect_gcd = gcd(self.width, self.height)
-    self.aspect_width = self.width/aspect_gcd
-    self.aspect_height = self.height/aspect_gcd
-    self.image.open('r')
-    self.image_hash = hash_file(self.image.file)
-    self.image.close()
-    self.extension = os.path.splitext(self.image.path)[1]
-    self.mime_type = mimetypes.types_map[self.extension]
+    self.aspect = Decimal(self.width)/Decimal(self.height)
+
     self.save()
     return True
 
 
   @property
   def http_image(self):
-    if not self.image:
-      if not self.populate():
-        return Http404
     self.image.open('r')
-    response = HttpResponse(content = self.image.file, mimetype = self.mime_type)
+    response = HttpResponse(content = self.image.file, mimetype = self.mimetype)
     
     return response
 
+  def http_image_resized(self, size):
+    size = tuple([int(val) for val in size])
+    self.image.open('r')
+    temp_image = Image.open(self.image.file).resize(size)
 
-class NounImageExternal(NounImage):
+    response = HttpResponse(mimetype = self.mimetype)
+    temp_image.save(response, self.extension.strip('.').capitalize())
+
+    return response
+
+class NounExternal(NounBase):
   url = models.URLField(verify_exists = False)
+  available = models.BooleanField(default = True)
 
   def populate(self):
     this_image = get_file_from_url(self.url)
     if this_image:
       self.image = File(this_image)
       self.save()
-      if self.set_image_properties():
-        return True
+      return self.set_image_properties()
+    self.delete()
     return False
 
-  @property
-  def static(self, size = None):
-    if not self.image:
-      if not self.populate():
-        return False
-    this_static_noun, created = NounStatic.objects.get_or_create(parent = self, text = self.text, sfw = self.sfw)
-    x = this_static_noun.parent
+  def to_static(self, size = None):
+    this_static, created = NounStatic.objects.get_or_create(
+      parent = self, 
+      noun = self.noun, 
+      nsfw = self.nsfw,
+      extension = self.extension,
+      mimetype = self.mimetype,
+      aspect = self.aspect)
     if not created:
-      return this_static_noun
+      return this_static
     dst_file = tempfile.NamedTemporaryFile(suffix = self.extension)
 
     # Handle resizing if needed
@@ -116,44 +136,33 @@ class NounImageExternal(NounImage):
       shutil.copyfileobj(self.image.file, dst_file)
       self.image.close()
 
-    this_static_noun.image = File(dst_file)
-    this_static_noun.save()
-    if this_static_noun.set_image_properties():
-      return this_static_noun
+    this_static.image = File(dst_file)
+    this_static.save()
+    if this_static.set_image_properties():
+      self.available = False
+      self.save()
+      return this_static
     return False
-    
 
-class NounStatic(NounImage):
-  parent = models.ForeignKey(NounImageExternal, unique = True)
+def populate_image(sender, instance, **kwargs):
+  if instance.url and not instance.image and instance.id:
+    instance.populate()
+
+post_init.connect(populate_image, NounExternal)
+
+class NounStatic(NounBase):
+  parent = models.ForeignKey(NounExternal, unique = True)
 
 class Search(TimeStampable):
   last_searched = models.DateTimeField(null = True)
   has_results = models.NullBooleanField(default = None)
-  query = models.SlugField()
-  base = models.BooleanField(default = False)
-
-  # Default search properties
-  # @shazam: executes the search.  False says on results were found
-  # @is_final: says that there are no more permutations to be executed
-  # @next_permutation: relates to is_final stating that there is no other
-  # search permuation to be executed
-  @property
-  def shazam():
-    return False
-
-  @property
-  def is_final():
-    return True
-
-  @property
-  def next_permutation():
-    return False
+  query = models.CharField(max_length = 100)
 
 class SearchGoogle(Search):
   response_code = models.CharField(max_length = 100)
   result_count = models.IntegerField(default = 0)
   page = models.IntegerField(default = 0)
-  page_size = models.IntegerField(default = 8)
+  page_size = models.IntegerField(default = 4)
   imgsz = models.CharField(max_length = 10, default = '')
   restrict = models.CharField(max_length = 32, default = '')
   filetype = models.CharField(max_length = 10, default = '')
@@ -177,13 +186,6 @@ class SearchGoogle(Search):
     params['as_sitesearch'] = self.site
 
     return urllib.urlencode(params)
-
-  @property
-  def next_permuation(self):
-    next_search, created = SearchGoogle.objects.get_or_create(
-      query = self.query,
-      page = self.page + 1)
-    return next_search
 
   # Executes the search.
   def shazam(self, raw = False):
@@ -211,16 +213,17 @@ class SearchGoogle(Search):
       return False
 
     self.result_count = int(data['responseData']['cursor']['estimatedResultCount'])
-    self.last_searched = datatime.datetime.now()
+    self.last_searched = datetime.datetime.now()
     self.save()
 
     # Iterate through the results and create blank image objects.
     for result in data['responseData']['results']:
-      new_image = NounImageExternal.objects.create(
+      new_image = NounExternal.objects.create(
         url = result['url'],
         width = result['width'],
         height = result['height'],
-        text = self.query,
+        noun = self.query,
+        aspect = Decimal(result['width'])/Decimal(result['height'])
         )
 
     return True
