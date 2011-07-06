@@ -176,6 +176,9 @@ class SearchGoogle(Search):
   rights = models.CharField(max_length = 32, default = '')
   site = models.CharField(max_length = 100, default = '')
 
+  def __unicode__(self):
+    return "<SearchGoogle: %s : page(%s)>"%(self.query, self.page)
+
   @property
   def params(self):
     params = {}
@@ -183,14 +186,13 @@ class SearchGoogle(Search):
     if API_KEY:
       params['key'] = API_KEY
     params['q'] = self.query
-    params['rsz'] = self.page_size
-    if self.result_count > self.page * self.page_size:
-      params['start'] = self.page * self.page_size
-    params['imgsz'] = self.imgsz
-    params['restrict'] = self.restrict
-    params['as_filetype'] = self.filetype
-    params['as_rights'] = self.rights
-    params['as_sitesearch'] = self.site
+    #params['rsz'] = self.page_size
+    params['start'] = self.page * self.page_size
+    #params['imgsz'] = self.imgsz
+    #params['restrict'] = self.restrict
+    #params['as_filetype'] = self.filetype
+    #params['as_rights'] = self.rights
+    #params['as_sitesearch'] = self.site
 
     return urllib.urlencode(params)
 
@@ -223,6 +225,7 @@ class SearchGoogle(Search):
     self.last_searched = datetime.datetime.now()
     self.save()
 
+
     # Iterate through the results and create blank image objects.
     for result in data['responseData']['results']:
       new_image, created = NounExternal.objects.get_or_create(
@@ -230,7 +233,8 @@ class SearchGoogle(Search):
         width = result['width'],
         height = result['height'],
         noun = self.query,
-        aspect = Decimal(result['width'])/Decimal(result['height'])
         )
+      if created:
+        new_image.aspect = Decimal(result['width'])/Decimal(result['height'])
 
     return True

@@ -2,7 +2,7 @@ import urllib2
 import urllib
 import simplejson
 
-from decimal import Decimal
+from decimal import Decimal, getcontext
 
 from django.shortcuts import render_to_response
 from django.template import RequestContext
@@ -25,31 +25,38 @@ def noun_static(request, noun, width, height):
     return this_image.http_image
 
   noun_query = NounExternal.objects.filter(available = True, noun = noun, width = width, height = height)
+  q1 = noun_query
   if noun_query.exists():
     this_image = noun_query[:1].get().to_static()
     if this_image:
       return this_image.http_image
 
   aspect = Decimal(width)/Decimal(height)
+  num_part = str(aspect).split('.')[0]
+  getcontext().prec = len(num_part) + 10
+  aspect = Decimal(width)/Decimal(height)
   noun_query = NounExternal.objects.filter(available = True, noun= noun, aspect = aspect, width__gte = width, height__gte = height)
+  q2 = noun_query
   if noun_query.exists():
-    this_image = noun_query.get().to_static(size=(width, height))
+    this_image = noun_query[:1].get().to_static(size=(width, height))
     if this_image:
       return this_image.http_image
+  raise AttributeError
+
 
   # At this point we couldn't find a suitable match, so... we'll serve
   # up a best fit result but it won't be perminant
 
   search_query = SearchGoogle.objects.filter(query = noun)
   if search_query.exists():
-    latest_search = search_query.order_by('-page')[0]
-    if not latest_search.last_searched:
-      this_search = latest_search
+    if search_query.filter(last_searched = None).exists():
+      this_search = search_query.filter(last_searched = None).order_by('page')[:1].get()
     else:
+      latest_search = search_query.order_by('-page')[:1].get()
       this_search = SearchGoogle.objects.create(query = noun, page = latest_search.page + 1)
   else:
     this_search = SearchGoogle.objects.create(query = noun)
-  this_search.shazam()
+  x = this_search.shazam()
 
   radius = 1
   while True:
@@ -71,10 +78,10 @@ def noun(request, noun, width = None, height = None):
 
   search_query = SearchGoogle.objects.filter(query = noun)
   if search_query.exists():
-    latest_search = search_query.order_by('-page')[0]
-    if not latest_search.last_searched:
-      this_search = latest_search
+    if search_query.filter(last_searched = None).exists():
+      this_search = search_query.filter(last_searched = None).order_by('page')[:1].get()
     else:
+      latest_search = search_query.order_by('page')[:1].get()
       this_search = SearchGoogle.objects.create(query = noun, page = latest_search.page + 1)
   else:
     this_search = SearchGoogle.objects.create(query = noun)
