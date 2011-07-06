@@ -60,7 +60,7 @@ class NounBase(TimeStampable):
       return False
     self.image_hash = image_hash
 
-    self.extension = os.path.splitext(self.image.path)[1]
+    self.extension = os.path.splitext(self.image.path)[1].lower()
     if self.extension.lower() == '.gif':
       self.image.open('r')
       pil_image = Image.open(self.image.file)
