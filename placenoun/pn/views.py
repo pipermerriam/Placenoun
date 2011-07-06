@@ -41,7 +41,6 @@ def noun_static(request, noun, width, height):
     this_image = noun_query[:1].get().to_static(size=(width, height))
     if this_image:
       return this_image.http_image
-  raise AttributeError
 
 
   # At this point we couldn't find a suitable match, so... we'll serve

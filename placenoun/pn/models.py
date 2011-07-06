@@ -28,7 +28,7 @@ from placenoun.fileutilities.main import *
 API_KEY = settings.API_KEY
 
 def upload_path(instance, filename):
-  return '/'.join([instance.slug, datetime.datetime.now().strftime('%Y/%m/%d'), os.path.basename(filename)])
+  return '/'.join([instance.slug[:2].strip('.-_'), instance.slug, datetime.datetime.now().strftime('%Y/%m/%d'), os.path.basename(filename)])
 
 class NounBase(TimeStampable):
   noun = models.CharField(max_length = 100)
@@ -167,7 +167,7 @@ class Search(TimeStampable):
 
 class SearchGoogle(Search):
   response_code = models.CharField(max_length = 100)
-  result_count = models.IntegerField(default = 0)
+  result_count = models.BigIntegerField(default = 0)
   page = models.IntegerField(default = 0)
   page_size = models.IntegerField(default = 4)
   imgsz = models.CharField(max_length = 10, default = '')
