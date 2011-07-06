@@ -55,7 +55,7 @@ class NounBase(TimeStampable):
     self.image.open('r')
     image_hash = hash_file(self.image.file)
     self.image.close()
-    if not image_hash = None and type(self).objects.filter(image_hash = image_hash).exists():
+    if not image_hash == None and type(self).objects.filter(image_hash = image_hash).exists():
       self.delete()
       return False
     self.image_hash = image_hash
