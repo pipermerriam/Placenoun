@@ -127,8 +127,8 @@ class NounExternal(NounBase):
     if size:
       self.image.open('r')
       src_img = Image.open(self.image.file, 'r')
-      self.image.close()
       new_image = src_img.resize(size)
+      self.image.close()
       new_image.save(dst_file)
     else:
       self.image.open('r')
