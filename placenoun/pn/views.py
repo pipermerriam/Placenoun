@@ -17,8 +17,9 @@ def index(request):
   return render_to_response(template, data, context)
 
 def noun_static(request, noun, width, height):
-  width = int(width)
-  height = int(height)
+  width = min(2048, int(width))
+  height = min(2048, int(height))
+
   noun_query = NounStatic.objects.filter(noun = noun, width = width, height = height)
   if noun_query.exists():
     this_image = noun_query.get()
