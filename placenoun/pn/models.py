@@ -90,7 +90,6 @@ class NounBase(TimeStampable):
     return response
 
   def http_image_resized(self, size):
-    size = tuple([int(val) for val in size])
     self.image.open('r')
     temp_image = Image.open(self.image.file).resize(size)
 

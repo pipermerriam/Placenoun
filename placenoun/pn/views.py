@@ -17,6 +17,8 @@ def index(request):
   return render_to_response(template, data, context)
 
 def noun_static(request, noun, width, height):
+  width = int(width)
+  height = int(height)
   noun_query = NounStatic.objects.filter(noun = noun, width = width, height = height)
   if noun_query.exists():
     this_image = noun_query.get()
@@ -49,9 +51,15 @@ def noun_static(request, noun, width, height):
     this_search = SearchGoogle.objects.create(query = noun)
   this_search.shazam()
 
-  noun_query = NounExternal.objects.filter(noun = noun, width__gte = width, height__gte = height)
-  if noun_query.exists():
-    noun_query = sorted(noun_query, key = lambda noun_obj: abs(noun_obj.aspect-aspect))
+  radius = 1
+  while True:
+    noun_query = NounExternal.objects.filter(noun = noun).filter(
+      width__lte = width + radius, height__lte = height + radius).filter(
+      width__gte = width - radius, height__gte = height - radius)
+    if not noun_query.exists():
+      radius = radius*2
+      continue
+    noun_query = sorted(noun_query, key = lambda noun_obj: ( (width-noun_obj.width)**2 + (height-noun_obj.height)**2)**0.5 )
     this_image = noun_query[0]
     return this_image.http_image_resized(size=(width, height))
 
