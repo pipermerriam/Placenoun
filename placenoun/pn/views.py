@@ -66,7 +66,7 @@ def noun_static(request, noun, width, height):
 def noun(request, noun, width = None, height = None):
   noun_query = NounStatic.objects.filter(noun = noun)
   if noun_query.exists():
-    this_image = noun_query.order_by('?')[0]
+    this_image = noun_query.order_by('?')[:1].get()
     return this_image.http_image
 
   search_query = SearchGoogle.objects.filter(query = noun)
@@ -82,5 +82,5 @@ def noun(request, noun, width = None, height = None):
 
   noun_query = NounExternal.objects.filter(noun = noun)
   if noun_query.exists():
-    this_image = noun_query.order_by('?')[0]
+    this_image = noun_query.order_by('?')[:1].get()
     return this_image.http_image
