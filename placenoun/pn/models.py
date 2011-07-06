@@ -182,11 +182,11 @@ class SearchGoogle(Search):
 
   @property
   def next(self):
-    PAGES = tuple(range(0, 64, self.page_size))
-    FILE_TYPES = tuple(['', 'jpg', 'png', 'gif', 'bmp'])
-    RIGHTS = tuple(['', 'cc_publicdomain', 'cc_attribute', 'cc_sharealike', 'cc_noncommercial', 'cc_nonderived'])
-    IMAGE_SIZE = tuple(['', 'huge', 'xxlarge', 'medium', 'icon'])
-    RESTRICT = tuple(['', 'cc_attribute'])
+    PAGES = range(0, 64, self.page_size)
+    FILE_TYPES = ['', 'jpg', 'png', 'gif', 'bmp']
+    RIGHTS = ['', 'cc_publicdomain', 'cc_attribute', 'cc_sharealike', 'cc_noncommercial', 'cc_nonderived']
+    IMAGE_SIZE = ['', 'huge', 'xxlarge', 'medium', 'icon']
+    RESTRICT = ['', 'cc_attribute']
 
     page = self.page
     page_size = self.page_size
