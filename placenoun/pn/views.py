@@ -26,7 +26,7 @@ def noun_static(request, noun, width, height):
 
   noun_query = NounExternal.objects.filter(available = True, noun = noun, width = width, height = height)
   if noun_query.exists():
-    this_image = noun_query.get().to_static()
+    this_image = noun_query[:1].get().to_static()
     if this_image:
       return this_image.http_image
 
