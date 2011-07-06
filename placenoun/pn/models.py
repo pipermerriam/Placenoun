@@ -157,6 +157,9 @@ class Search(TimeStampable):
   has_results = models.NullBooleanField(default = None)
   query = models.CharField(max_length = 100)
 
+  class Meta:
+    abstract = True
+
 class SearchGoogle(Search):
   response_code = models.CharField(max_length = 100)
   result_count = models.IntegerField(default = 0)
