@@ -102,14 +102,15 @@ class NounExternal(NounBase):
   url = models.URLField(verify_exists = False)
   available = models.BooleanField(default = True)
 
+  def __unicode__(self):
+    return "<NounExternal: %s>"%(self.id)
+
   def populate(self):
     this_image = get_file_from_url(self.url)
     if this_image:
       self.image = File(this_image)
       self.save()
       return self.set_image_properties()
-    self.available = False
-    self.save()
     return False
 
   def to_static(self, size = None):
@@ -152,6 +153,9 @@ post_init.connect(populate_image, NounExternal)
 
 class NounStatic(NounBase):
   parent = models.ForeignKey(NounExternal, unique = True)
+
+  def __unicode__(self):
+    return "<NounStatic: id($s) : noun(%s) : for %sx%s>"%(self.id, self.noun, self.width, self.height) 
 
 class Search(TimeStampable):
   last_searched = models.DateTimeField(null = True)
@@ -221,7 +225,7 @@ class SearchGoogle(Search):
 
     # Iterate through the results and create blank image objects.
     for result in data['responseData']['results']:
-      new_image = NounExternal.objects.create(
+      new_image, created = NounExternal.objects.get_or_create(
         url = result['url'],
         width = result['width'],
         height = result['height'],
