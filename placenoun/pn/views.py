@@ -69,12 +69,11 @@ def noun_static(request, noun, width, height):
     noun_query = sorted(noun_query, key = lambda noun_obj: ( (width-noun_obj.width)**2 + (height-noun_obj.height)**2)**0.5 )
     this_image = noun_query[0]
     if not this_image.id:
-      raise AttributeError
       continue
     return this_image.http_image_resized(size=(width, height))
 
 def noun(request, noun, width = None, height = None):
-  noun_query = NounStatic.objects.filter(noun = noun)
+  noun_query = NounExternal.objects.filter(noun = noun)
   if noun_query.exists():
     this_image = noun_query.order_by('?')[:1].get()
     return this_image.http_image
@@ -90,7 +89,10 @@ def noun(request, noun, width = None, height = None):
     this_search = SearchGoogle.objects.create(query = noun)
   this_search.shazam()
 
-  noun_query = NounExternal.objects.filter(noun = noun)
-  if noun_query.exists():
-    this_image = noun_query.order_by('?')[:1].get()
-    return this_image.http_image
+  while True:
+    noun_query = NounExternal.objects.filter(noun = noun)
+    if noun_query.exists():
+      this_image = noun_query.order_by('?')[:1].get()
+      if not this_image.id:
+        continue
+      return this_image.http_image
