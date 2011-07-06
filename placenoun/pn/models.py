@@ -55,9 +55,8 @@ class NounBase(TimeStampable):
     self.image.open('r')
     image_hash = hash_file(self.image.file)
     self.image.close()
-    if type(self).objects.filter(image_hash = image_hash).exists():
-      self.available = False
-      self.save()
+    if not image_hash = None and type(self).objects.filter(image_hash = image_hash).exists():
+      self.delete()
       return False
     self.image_hash = image_hash
 
@@ -71,8 +70,7 @@ class NounBase(TimeStampable):
         self.image.close()
         pass
       else:
-        self.available = False
-        self.save()
+        self.delete()
         return False
     self.mimetype = mimetypes.types_map[self.extension]
 
