@@ -7,7 +7,10 @@ import os
 def get_file_from_url(url):
   import tempfile
 
-  url_response = urllib2.urlopen(url)
+  try:
+    url_response = urllib2.urlopen(url)
+  except urllib2.HTTPError:
+    return False
   extension = os.path.splitext(url)[1]
   if extension == '.jpg':
     extension = '.jpeg'

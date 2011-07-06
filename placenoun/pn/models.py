@@ -111,6 +111,7 @@ class NounExternal(NounBase):
       self.image = File(this_image)
       self.save()
       return self.set_image_properties()
+    self.delete()
     return False
 
   def to_static(self, size = None):
