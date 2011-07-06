@@ -49,13 +49,14 @@ def noun_static(request, noun, width, height):
   search_query = SearchGoogle.objects.filter(query = noun)
   if search_query.exists():
     if search_query.filter(last_searched = None).exists():
-      this_search = search_query.filter(last_searched = None).order_by('page')[:1].get()
+      this_search = search_query.filter(last_searched = None).order_by('created_at')[:1].get()
     else:
-      latest_search = search_query.order_by('-page')[:1].get()
-      this_search = SearchGoogle.objects.create(query = noun, page = latest_search.page + 1)
+      latest_search = search_query.order_by('-created_at')[:1].get()
+      this_search = latest_search.next
   else:
     this_search = SearchGoogle.objects.create(query = noun)
-  x = this_search.shazam()
+  if this_search:
+    x = this_search.shazam()
 
   radius = 1
   while True:
@@ -67,6 +68,9 @@ def noun_static(request, noun, width, height):
       continue
     noun_query = sorted(noun_query, key = lambda noun_obj: ( (width-noun_obj.width)**2 + (height-noun_obj.height)**2)**0.5 )
     this_image = noun_query[0]
+    if not this_image.id:
+      raise AttributeError
+      continue
     return this_image.http_image_resized(size=(width, height))
 
 def noun(request, noun, width = None, height = None):

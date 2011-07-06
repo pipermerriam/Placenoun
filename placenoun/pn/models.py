@@ -170,7 +170,7 @@ class SearchGoogle(Search):
   response_code = models.CharField(max_length = 100)
   result_count = models.BigIntegerField(default = 0)
   page = models.IntegerField(default = 0)
-  page_size = models.IntegerField(default = 4)
+  page_size = models.IntegerField(default = 8)
   imgsz = models.CharField(max_length = 10, default = '')
   restrict = models.CharField(max_length = 32, default = '')
   filetype = models.CharField(max_length = 10, default = '')
@@ -181,6 +181,53 @@ class SearchGoogle(Search):
     return "<SearchGoogle: %s : page(%s)>"%(self.query, self.page)
 
   @property
+  def next(self):
+    PAGES = tuple(range(0, 64, self.page_size))
+    FILE_TYPES = tuple(['', 'jpg', 'png', 'gif', 'bmp'])
+    RIGHTS = tuple(['', 'cc_publicdomain', 'cc_attribute', 'cc_sharealike', 'cc_noncommercial', 'cc_nonderived'])
+    IMAGE_SIZE = tuple(['', 'huge', 'xxlarge', 'medium', 'icon'])
+    RESTRICT = tuple(['', 'cc_attribute'])
+
+    page = self.page
+    page_size = self.page_size
+    imgsz = self.imgsz
+    restrict = self.restrict
+    rights = self.rights
+    filetype = self.filetype
+
+    if (page+1)*page_size < 64:
+      page = page + 1
+    elif FILE_TYPES.index(filetype) < len(FILE_TYPES) - 1:
+      page = 1
+      filetype = FILE_TYPES[FILE_TYPES.index(filetype)+1]
+    elif RIGHTS.index(rights) < len(RIGHTS) - 1:
+      page = 1
+      filetype = ''
+      rights = RIGHTS[RIGHTS.index(rights)+1]
+    elif IMAGE_SIZE.index(imgsz) < len(IMAGE_SIZE) - 1:
+      page = 1
+      filetype = ''
+      rights = ''
+      imgsz = IMAGE_SIZE[IMAGE_SIZE.index(imgsz)+1]
+    elif RESTRICT.index(restrict) < len(RESTRICT) - 1:
+      page = 1
+      filetype = ''
+      rights = ''
+      imgsz = ''
+      restrict = RESTRICT[RESTRICT.index(restrict)+1]
+    else:
+      return False
+
+    return SearchGoogle.objects.get_or_create(
+      query = self.query,
+      page = page,
+      filetype = filetype,
+      rights = rights,
+      imgsz = imgsz,
+      restrict = restrict)[0]
+
+
+  @property
   def params(self):
     params = {}
     params['v'] = '1.0'
@@ -189,10 +236,14 @@ class SearchGoogle(Search):
     params['q'] = self.query
     #params['rsz'] = self.page_size
     params['start'] = self.page * self.page_size
-    #params['imgsz'] = self.imgsz
-    #params['restrict'] = self.restrict
-    #params['as_filetype'] = self.filetype
-    #params['as_rights'] = self.rights
+    if self.imgsz:
+      params['imgsz'] = self.imgsz
+    if self.restrict:
+      params['restrict'] = self.restrict
+    if self.filetype:
+      params['as_filetype'] = self.filetype
+    if self.rights:
+      params['as_rights'] = self.rights
     #params['as_sitesearch'] = self.site
 
     return urllib.urlencode(params)
@@ -210,6 +261,8 @@ class SearchGoogle(Search):
     if raw:
       return data
 
+    self.last_searched = datetime.datetime.now()
+
     # Checks to be sure that we received a 200 response code.
     self.response = data['responseStatus']
     if not self.response == 200:
@@ -223,7 +276,6 @@ class SearchGoogle(Search):
       return False
 
     self.result_count = int(data['responseData']['cursor']['estimatedResultCount'])
-    self.last_searched = datetime.datetime.now()
     self.save()
 
 
