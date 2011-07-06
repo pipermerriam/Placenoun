@@ -110,7 +110,15 @@ class NounExternal(NounBase):
     if this_image:
       self.image = File(this_image)
       self.save()
-      return self.set_image_properties()
+      try:
+        self.image.open('r')
+        pil_image = Image.open(self.image.file)
+        pil_image.verify()
+        self.image.close()
+      except IOError:
+        pass
+      else:
+        return self.set_image_properties()
     self.delete()
     return False
 

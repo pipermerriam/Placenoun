@@ -73,7 +73,7 @@ def noun_static(request, noun, width, height):
       continue
     return this_image.http_image_resized(size=(width, height))
 
-def noun(request, noun, width = None, height = None):
+def noun(request, noun):
   noun_query = NounExternal.objects.filter(noun = noun)
   if noun_query.exists():
     if noun_query.count() > 100:
@@ -84,13 +84,14 @@ def noun(request, noun, width = None, height = None):
   search_query = SearchGoogle.objects.filter(query = noun)
   if search_query.exists():
     if search_query.filter(last_searched = None).exists():
-      this_search = search_query.filter(last_searched = None).order_by('page')[:1].get()
+      this_search = search_query.filter(last_searched = None).order_by('created_at')[:1].get()
     else:
-      latest_search = search_query.order_by('page')[:1].get()
-      this_search = SearchGoogle.objects.create(query = noun, page = latest_search.page + 1)
+      latest_search = search_query.order_by('-created_at')[:1].get()
+      this_search = latest_search.next
   else:
     this_search = SearchGoogle.objects.create(query = noun)
-  this_search.shazam()
+  if this_search:
+    x = this_search.shazam()
 
   while True:
     noun_query = NounExternal.objects.filter(noun = noun)
