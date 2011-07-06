@@ -64,12 +64,23 @@ def noun_static(request, noun, width, height):
     return this_image.http_image_resized(size=(width, height))
 
 def noun(request, noun, width = None, height = None):
-  if not NounImageExternal.objects.filter(text = noun).exists():
-    new_search = SearchGoogle()
-    new_search.query = noun
-    if not new_search.shazam():
-      context = RequestContext(request)
-      return render_to_response(template, data, context)
-  this_image = NounImageExternal.objects.filter(text = noun)[0]
+  noun_query = NounStatic.objects.filter(noun = noun)
+  if noun_query.exists():
+    this_image = noun_query.order_by('?')[0]
+    return this_image.http_image
 
-  return this_image.http_image
+  search_query = SearchGoogle.objects.filter(query = noun)
+  if search_query.exists():
+    latest_search = search_query.order_by('-page')[0]
+    if not latest_search.last_searched:
+      this_search = latest_search
+    else:
+      this_search = SearchGoogle.objects.create(query = noun, page = latest_search.page + 1)
+  else:
+    this_search = SearchGoogle.objects.create(query = noun)
+  this_search.shazam()
+
+  noun_query = NounExternal.objects.filter(noun = noun)
+  if noun_query.exists():
+    this_image = noun_query.order_by('?')[0]
+    return this_image.http_image
