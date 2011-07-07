@@ -100,7 +100,7 @@ class NounBase(TimeStampable):
     return response
 
 class NounExternal(NounBase):
-  url = models.URLField(verify_exists = False)
+  url = models.URLField(verify_exists = False, max_length = 300)
   available = models.BooleanField(default = True)
 
   def __unicode__(self):
