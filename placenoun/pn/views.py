@@ -1,6 +1,4 @@
-import urllib2
-import urllib
-import simplejson
+import random
 
 from decimal import Decimal, getcontext
 
@@ -26,29 +24,28 @@ def noun_static(request, noun, width, height):
     return this_image.http_image
 
   noun_query = NounExternal.objects.filter(available = True, noun = noun, width = width, height = height)
-  q1 = noun_query
   if noun_query.exists():
-    this_image = noun_query[:1].get().to_static()
-    if this_image:
+    this_image = noun_query[0]
+    if this_image.id:
+      this_image = this_image.to_static()
       return this_image.http_image
 
-  aspect = Decimal(width)/Decimal(height)
-  num_part = str(aspect).split('.')[0]
+  num_part = str(Decimal(width)/Decimal(height)).split('.')[0]
   getcontext().prec = len(num_part) + 10
   aspect = Decimal(width)/Decimal(height)
   noun_query = NounExternal.objects.filter(available = True, noun= noun, aspect = aspect, width__gte = width, height__gte = height)
   q2 = noun_query
   if noun_query.exists():
-    this_image = noun_query[:1].get().to_static(size=(width, height))
-    if this_image:
+    this_image = noun_query[0]
+    if this_image.id:
+      this_image = this_image.to_static(size=(width, height))
       return this_image.http_image
 
 
   # At this point we couldn't find a suitable match, so... we'll serve
   # up a best fit result but it won't be perminant
 
-  if not SearchBing.do_next_search(noun):
-    SearchGoogle.do_next_search(noun)
+  random.choice([SearchBing, SearchGoogle]).do_next_search(noun)
 
   radius = 1
   while True:

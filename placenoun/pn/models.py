@@ -8,19 +8,14 @@ import tempfile
 import shutil
 
 from decimal import Decimal
-from PIL import Image
-
-try:
-  from fractions import gcd
-except ImportError:
-  from placenoun.numberutilities.main import gcd
+from PIL import Image, ImageFile
 
 from django.core.files import File
 from django.conf import settings
 from django.db import models
 from django.http import HttpResponse, Http404
 from django.template.defaultfilters import slugify
-from django.db.models.signals import post_init
+from django.db.models.signals import post_init, post_save
 
 from placenoun.behaviors.models import *
 from placenoun.fileutilities.main import *
@@ -107,19 +102,47 @@ class NounExternal(NounBase):
     return "<NounExternal: %s>"%(self.id)
 
   def populate(self):
-    this_image = get_file_from_url(self.url)
-    if this_image:
-      self.image = File(this_image)
-      self.save()
-      try:
-        self.image.open('r')
-        pil_image = Image.open(self.image.file)
-        pil_image.verify()
-        self.image.close()
-      except IOError:
-        pass
-      else:
-        return self.set_image_properties()
+    request = urllib2.Request(self.url)
+    
+    try:
+      response = urllib2.urlopen(request)
+    except urllib2.HTTPError:
+      pass
+    else:
+      if response.code == 200:
+        mimetype = mimetypes.guess_type(self.url)[0]
+        if mimetype == response.headers.type:
+          image_parser = ImageFile.Parser()
+          image_hasher = hashlib.sha256()
+          while True:
+            buf = response.read(1024)
+            if buf:
+              image_parser.feed(buf)
+              image_hasher.update(buf)
+              continue
+            break
+          extension = mimetypes.guess_extension(mimetype)
+          temp = tempfile.NamedTemporaryFile(suffix = extension)
+          new_image = image_parser.close()
+          new_image.save(temp)
+          
+          self.image = File(temp)
+          self.save()
+          try:
+            self.image.open('r')
+            new_image = Image.open(self.image.file)
+            new_image.verify()
+          except IOError:
+            pass
+          else:
+            self.image_hash = image_hasher.hexdigest()
+            self.mimetype = mimetype
+            self.extension = extension
+            self.width = self.image.width
+            self.height = self.image.height
+            self.aspect = Decimal(self.image.width)/Decimal(self.image.height)
+            self.save()
+            return True
     self.delete()
     return False
 
@@ -133,27 +156,29 @@ class NounExternal(NounBase):
       aspect = self.aspect)
     if not created:
       return this_static
-    dst_file = tempfile.NamedTemporaryFile(suffix = self.extension)
+    temp_file = tempfile.NamedTemporaryFile(suffix = self.extension)
 
     # Handle resizing if needed
+    self.image.open('r')
+
     if size:
-      self.image.open('r')
       src_img = Image.open(self.image.file, 'r')
       new_image = src_img.resize(size)
-      self.image.close()
-      new_image.save(dst_file)
+      new_image.save(temp_file)
     else:
-      self.image.open('r')
-      shutil.copyfileobj(self.image.file, dst_file)
-      self.image.close()
+      shutil.copyfileobj(self.image.file, temp_file)
+
+    self.image.close()
 
     this_static.image = File(dst_file)
     this_static.save()
-    if this_static.set_image_properties():
-      self.available = False
-      self.save()
-      return this_static
-    return False
+    this_static.width = this_static.image.width
+    this_static.height = this_static.image.height
+    this_static.save()
+
+    self.available = False
+    self.save()
+    return this_static
 
 def populate_image(sender, instance, **kwargs):
   if instance.url and not instance.image and instance.id:
