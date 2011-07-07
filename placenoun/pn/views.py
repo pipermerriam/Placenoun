@@ -65,7 +65,7 @@ def noun(request, noun):
   noun_query = NounExternal.objects.filter(noun = noun)
   if noun_query.exists():
     if noun_query.count() > 100:
-      this_image = noun_query.order_by('?')[:1].get()
+      this_image = noun_query.order_by('?')[0]
       if this_image.id:
         return this_image.http_image
 
@@ -75,7 +75,7 @@ def noun(request, noun):
   while True:
     noun_query = NounExternal.objects.filter(noun = noun)
     if noun_query.exists():
-      this_image = noun_query.order_by('?')[:1].get()
+      this_image = noun_query.order_by('?')[0]
       if not this_image.id:
         continue
       return this_image.http_image
