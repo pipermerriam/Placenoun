@@ -24,9 +24,14 @@ except ImportError:
   }
   
 try:
-  from site_settings import API_KEY
+  from site_settings import BING_API_KEY
 except ImportError:
-  API_KEY = None
+  BING_API_KEY = None
+
+try:
+  from site_settings import GOOGLE_API_KEY
+except ImportError:
+  GOOGLE_API_KEY = None
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name

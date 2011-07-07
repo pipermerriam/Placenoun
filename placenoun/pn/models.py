@@ -25,7 +25,8 @@ from django.db.models.signals import post_init
 from placenoun.behaviors.models import *
 from placenoun.fileutilities.main import *
 
-API_KEY = settings.API_KEY
+GOOGLE_API_KEY = settings.GOOGLE_API_KEY
+BING_API_KEY = settings.BING_API_KEY
 
 def upload_path(instance, filename):
   return '/'.join([instance.slug[:2].strip('.-_'), instance.slug, datetime.datetime.now().strftime('%Y/%m/%d'), os.path.basename(filename)])
@@ -174,10 +175,25 @@ class Search(TimeStampable):
   class Meta:
     abstract = True
 
+  @classmethod
+  def do_next_search(cls, noun):
+    search_query = cls.objects.filter(query = noun)
+    if search_query.exists():
+      if search_query.filter(last_searched = None).exists():
+        this_search = search_query.filter(last_searched = None).order_by('created_at')[:1].get()
+      else:
+        latest_search = search_query.order_by('-created_at')[:1].get()
+        this_search = latest_search.next
+    else:
+      this_search = cls.objects.create(query = noun)
+    if this_search:
+      return this_search.shazam()
+    return False
+
 class SearchGoogle(Search):
   response_code = models.CharField(max_length = 100)
   result_count = models.BigIntegerField(default = 0)
-  page = models.IntegerField(default = 0)
+  page = models.IntegerField(default = -1)
   page_size = models.IntegerField(default = 8)
   imgsz = models.CharField(max_length = 10, default = '')
   restrict = models.CharField(max_length = 32, default = '')
@@ -239,8 +255,8 @@ class SearchGoogle(Search):
   def params(self):
     params = {}
     params['v'] = '1.0'
-    if API_KEY:
-      params['key'] = API_KEY
+    if GOOGLE_API_KEY:
+      params['key'] = GOOGLE_API_KEY
     params['q'] = self.query
     #params['rsz'] = self.page_size
     params['start'] = self.page * self.page_size
@@ -297,5 +313,81 @@ class SearchGoogle(Search):
         )
       if created:
         new_image.aspect = Decimal(result['width'])/Decimal(result['height'])
+
+    return True
+
+class SearchBing(Search):
+  result_count = models.BigIntegerField(default = -1)
+  page = models.IntegerField(default = 0)
+  page_size = models.IntegerField(default = 10)
+
+  def __unicode__(self):
+    return "<SearchBing: %s : page(%s)>"%(self.query, self.page)
+
+  @property
+  def next(self):
+    page = self.page
+    page_size = self.page_size
+
+    if (page +1)*page_size < 1000:
+      page += 1
+    else:
+      return False
+
+    return SearchBing.objects.get_or_create(
+      page = page,
+      page_size = page_size,
+      query = self.query
+      )[0]
+
+  @property
+  def params(self):
+    params = {}
+    params['Sources'] = 'Image'
+    params['Version'] = '2.0'
+    params['AppId'] = BING_API_KEY
+    params['Query'] = self.query
+    params['Image.Count'] = self.page_size
+    params['Image.Offset'] = self.page * self.page_size
+
+    return urllib.urlencode(params)
+
+  def shazam(self, raw = False):
+    url = ('http://api.search.live.net/json.aspx?' + self.params)
+  
+    request = urllib2.Request(url, None, {'Referer': 'http://www.placenoun.com/'})
+    response = urllib2.urlopen(request)
+    
+    data = simplejson.load(response)
+
+    # Allows the return of the raw google json data
+    if raw:
+      return data
+
+    self.last_searched = datetime.datetime.now()
+
+    self.result_count = int(data['SearchResponse']['Image']['Total'])
+    if not self.result_count:
+      self.save()
+      return False
+
+    # If there are zero results for the search. return False.
+    self.has_results = 'Results' in data['SearchResponse']['Image']
+    if not self.has_results:
+      self.save()
+      return False
+
+    self.save()
+
+    # Iterate through the results and create blank image objects.
+    for result in data['SearchResponse']['Image']['Results']:
+      new_image, created = NounExternal.objects.get_or_create(
+        url = result['MediaUrl'],
+        width = result['Width'],
+        height = result['Height'],
+        noun = self.query,
+        )
+      if created:
+        new_image.aspect = Decimal(result['Width'])/Decimal(result['Height'])
 
     return True

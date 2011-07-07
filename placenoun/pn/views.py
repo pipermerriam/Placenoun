@@ -7,7 +7,7 @@ from decimal import Decimal, getcontext
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 
-from placenoun.pn.models import NounStatic, NounExternal, SearchGoogle
+from placenoun.pn.models import NounStatic, NounExternal, SearchGoogle, SearchBing
 
 def index(request):
   template = 'index.html'
@@ -47,17 +47,8 @@ def noun_static(request, noun, width, height):
   # At this point we couldn't find a suitable match, so... we'll serve
   # up a best fit result but it won't be perminant
 
-  search_query = SearchGoogle.objects.filter(query = noun)
-  if search_query.exists():
-    if search_query.filter(last_searched = None).exists():
-      this_search = search_query.filter(last_searched = None).order_by('created_at')[:1].get()
-    else:
-      latest_search = search_query.order_by('-created_at')[:1].get()
-      this_search = latest_search.next
-  else:
-    this_search = SearchGoogle.objects.create(query = noun)
-  if this_search:
-    x = this_search.shazam()
+  if not SearchBing.do_next_search():
+    SearchGoogle.do_next_search()
 
   radius = 1
   while True:
@@ -81,17 +72,8 @@ def noun(request, noun):
       if this_image.id:
         return this_image.http_image
 
-  search_query = SearchGoogle.objects.filter(query = noun)
-  if search_query.exists():
-    if search_query.filter(last_searched = None).exists():
-      this_search = search_query.filter(last_searched = None).order_by('created_at')[:1].get()
-    else:
-      latest_search = search_query.order_by('-created_at')[:1].get()
-      this_search = latest_search.next
-  else:
-    this_search = SearchGoogle.objects.create(query = noun)
-  if this_search:
-    x = this_search.shazam()
+  if not SearchBing.do_next_search():
+    SearchGoogle.do_next_search()
 
   while True:
     noun_query = NounExternal.objects.filter(noun = noun)
