@@ -47,8 +47,8 @@ def noun_static(request, noun, width, height):
   # At this point we couldn't find a suitable match, so... we'll serve
   # up a best fit result but it won't be perminant
 
-  if not SearchBing.do_next_search():
-    SearchGoogle.do_next_search()
+  if not SearchBing.do_next_search(noun):
+    SearchGoogle.do_next_search(noun)
 
   radius = 1
   while True:
@@ -72,8 +72,8 @@ def noun(request, noun):
       if this_image.id:
         return this_image.http_image
 
-  if not SearchBing.do_next_search():
-    SearchGoogle.do_next_search()
+  if not SearchBing.do_next_search(noun):
+    SearchGoogle.do_next_search(noun)
 
   while True:
     noun_query = NounExternal.objects.filter(noun = noun)
