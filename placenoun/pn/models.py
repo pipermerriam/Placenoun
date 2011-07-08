@@ -106,7 +106,7 @@ class NounExternal(NounBase):
     
     try:
       response = urllib2.urlopen(request)
-    except urllib2.HTTPError, urllib2.URLError:
+    except (urllib2.HTTPError, urllib2.URLError, TypeError):
       pass
     else:
       if response.code == 200:
