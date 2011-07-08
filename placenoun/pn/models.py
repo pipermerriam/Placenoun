@@ -113,6 +113,7 @@ class NounExternal(NounBase):
         mimetypes.init()
         mimetype = mimetypes.guess_type(self.url)[0]
         if mimetype == response.headers.type:
+          extension = mimetypes.guess_extension(mimetype)
           image_parser = ImageFile.Parser()
           temp = tempfile.NamedTemporaryFile(suffix = extension)
           image_hasher = hashlib.sha256()
@@ -124,7 +125,6 @@ class NounExternal(NounBase):
               image_hasher.update(buf)
               continue
             break
-          extension = mimetypes.guess_extension(mimetype)
           if extension == '.jpe':
             extension = '.jpeg'
           try:
