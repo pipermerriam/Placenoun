@@ -51,7 +51,7 @@ def noun_static(request, noun, width, height):
   while True:
     noun_query = NounExternal.objects.filter(noun = noun).filter(
       width__lte = width + radius, height__lte = height + radius).filter(
-      width__gte = width - radius, height__gte = height - radius)[:100]
+      width__gte = width - radius, height__gte = height - radius)[:10]
     if not noun_query:
       radius = radius*2
       if radius > 2000:
