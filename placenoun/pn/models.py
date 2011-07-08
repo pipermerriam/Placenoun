@@ -114,38 +114,41 @@ class NounExternal(NounBase):
         mimetype = mimetypes.guess_type(self.url)[0]
         if mimetype == response.headers.type:
           image_parser = ImageFile.Parser()
+          temp = tempfile.NamedTemporaryFile(suffix = extension)
           image_hasher = hashlib.sha256()
           while True:
             buf = response.read(1024)
             if buf:
               image_parser.feed(buf)
+              temp.write(buf)
               image_hasher.update(buf)
               continue
             break
           extension = mimetypes.guess_extension(mimetype)
           if extension == '.jpe':
             extension = '.jpeg'
-          temp = tempfile.NamedTemporaryFile(suffix = extension)
-          new_image = image_parser.close()
-          new_image.save(temp, mimetype.split('/')[1].capitalize())
-          
-          self.image = File(temp)
-          self.save()
           try:
-            self.image.open('r')
-            new_image = Image.open(self.image.file)
-            new_image.verify()
+            new_image = image_parser.close()
           except IOError:
             pass
           else:
-            self.image_hash = image_hasher.hexdigest()
-            self.mimetype = mimetype
-            self.extension = extension
-            self.width = self.image.width
-            self.height = self.image.height
-            self.aspect = Decimal(self.image.width)/Decimal(self.image.height)
+            self.image = File(temp)
             self.save()
-            return True
+            try:
+              self.image.open('r')
+              new_image = Image.open(self.image.file)
+              new_image.verify()
+            except IOError:
+              pass
+            else:
+              self.image_hash = image_hasher.hexdigest()
+              self.mimetype = mimetype
+              self.extension = extension
+              self.width = self.image.width
+              self.height = self.image.height
+              self.aspect = Decimal(self.image.width)/Decimal(self.image.height)
+              self.save()
+              return True
     self.delete()
     return False
 
