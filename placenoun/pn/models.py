@@ -127,7 +127,7 @@ class NounExternal(NounBase):
             extension = '.jpeg'
           temp = tempfile.NamedTemporaryFile(suffix = extension)
           new_image = image_parser.close()
-          new_image.save(temp)
+          new_image.save(temp, mimetype.split('/')[1].capitalize())
           
           self.image = File(temp)
           self.save()
@@ -167,7 +167,7 @@ class NounExternal(NounBase):
     if size:
       src_img = Image.open(self.image.file, 'r')
       new_image = src_img.resize(size)
-      new_image.save(temp_file)
+      new_image.save(temp_file, self.mimetype.split('/')[1].capitalize())
     else:
       shutil.copyfileobj(self.image.file, temp_file)
 
