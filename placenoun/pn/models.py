@@ -123,6 +123,8 @@ class NounExternal(NounBase):
               continue
             break
           extension = mimetypes.guess_extension(mimetype)
+          if extension == '.jpe':
+            extension = '.jpeg'
           temp = tempfile.NamedTemporaryFile(suffix = extension)
           new_image = image_parser.close()
           new_image.save(temp)
