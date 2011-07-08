@@ -54,6 +54,9 @@ def noun_static(request, noun, width, height):
       width__gte = width - radius, height__gte = height - radius)[:100]
     if not noun_query.exists():
       radius = radius*2
+      if radius > 2000:
+        random.choice([SearchBing, SearchGoogle]).do_next_search(noun)
+        radius = 1
       continue
     noun_query = sorted(noun_query, key = lambda noun_obj: ( (width-noun_obj.width)**2 + (height-noun_obj.height)**2)**0.5 )[:1]
     this_image = noun_query.get()
