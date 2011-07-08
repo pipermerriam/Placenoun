@@ -110,6 +110,7 @@ class NounExternal(NounBase):
       pass
     else:
       if response.code == 200:
+        mimetypes.init()
         mimetype = mimetypes.guess_type(self.url)[0]
         if mimetype == response.headers.type:
           image_parser = ImageFile.Parser()
