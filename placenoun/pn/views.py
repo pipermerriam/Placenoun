@@ -67,7 +67,6 @@ def noun_static(request, noun, width, height):
 def noun(request, noun):
   noun_query = NounExternal.objects.filter(noun = noun).order_by('?')[:1]
   if noun_query:
-    noun_query = noun_query[:1]
     this_image = noun_query.get()
     if this_image.id:
       return this_image.http_image
