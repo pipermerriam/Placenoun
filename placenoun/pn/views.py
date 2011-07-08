@@ -62,19 +62,19 @@ def noun_static(request, noun, width, height):
     return this_image.http_image_resized(size=(width, height))
 
 def noun(request, noun):
-  noun_query = NounExternal.objects.filter(noun = noun)[:1]
+  noun_query = NounExternal.objects.filter(noun = noun).order_by('?')[:1]
   if noun_query.exists():
     if noun_query.count() > 100:
-      this_image = noun_query.order_by('?')[0]
+      this_image = noun_query[0]
       if this_image.id:
         return this_image.http_image
 
   random.choice([SearchBing, SearchGoogle]).do_next_search(noun)
 
   while True:
-    noun_query = NounExternal.objects.filter(noun = noun)[:1]
+    noun_query = NounExternal.objects.filter(noun = noun).order_by('?')[:1]
     if noun_query.exists():
-      this_image = noun_query.order_by('?')[0]
+      this_image = noun_query[0]
       if not this_image.id:
         continue
       return this_image.http_image
