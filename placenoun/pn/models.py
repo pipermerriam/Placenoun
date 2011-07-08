@@ -189,6 +189,9 @@ post_init.connect(populate_image, NounExternal)
 class NounStatic(NounBase):
   parent = models.ForeignKey(NounExternal, unique = True)
 
+  class Meta:
+    unique_together = ['noun', 'width', 'height']
+
   def __unicode__(self):
     return "<NounStatic: id($s) : noun(%s) : for %sx%s>"%(self.id, self.noun, self.width, self.height) 
 
@@ -330,15 +333,21 @@ class SearchGoogle(Search):
 
     # Iterate through the results and create blank image objects.
     for result in data['responseData']['results']:
-      new_image, created = NounExternal.objects.get_or_create(
+      noun_query = NounExternal.objects.filter(
         url = result['url'],
         width = result['width'],
         height = result['height'],
         noun = self.query,
-        )
-      if created:
-        new_image.aspect = Decimal(result['width'])/Decimal(result['height'])
-
+        )[:1]
+      if not noun_query.exists():
+        new_image, created = NounExternal.objects.get_or_create(
+          url = result['url'],
+          width = result['width'],
+          height = result['height'],
+          noun = self.query,
+          )
+        if created:
+          new_image.aspect = Decimal(result['width'])/Decimal(result['height'])
     return True
 
 class SearchBing(Search):
@@ -406,13 +415,19 @@ class SearchBing(Search):
 
     # Iterate through the results and create blank image objects.
     for result in data['SearchResponse']['Image']['Results']:
-      new_image, created = NounExternal.objects.get_or_create(
+      noun_query = NounExternal.objects.filter(
         url = result['MediaUrl'],
         width = result['Width'],
         height = result['Height'],
         noun = self.query,
-        )
-      if created:
-        new_image.aspect = Decimal(result['Width'])/Decimal(result['Height'])
-
+        )[:1]
+      if not noun_query.exists():
+        new_image, created = NounExternal.objects.get_or_create(
+          url = result['MediaUrl'],
+          width = result['Width'],
+          height = result['Height'],
+          noun = self.query,
+          )
+        if created:
+          new_image.aspect = Decimal(result['Width'])/Decimal(result['Height'])
     return True
