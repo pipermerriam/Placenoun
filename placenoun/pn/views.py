@@ -59,7 +59,7 @@ def noun_static(request, noun, width, height):
         radius = 1
       continue
     noun_query = sorted(noun_query, key = lambda noun_obj: ( (width-noun_obj.width)**2 + (height-noun_obj.height)**2)**0.5 )[:1]
-    this_image = noun_query.get()
+    this_image = noun_query[0]
     if not this_image.id:
       continue
     return this_image.http_image_resized(size=(width, height))
