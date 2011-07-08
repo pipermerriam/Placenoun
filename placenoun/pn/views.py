@@ -65,13 +65,12 @@ def noun_static(request, noun, width, height):
     return this_image.http_image_resized(size=(width, height))
 
 def noun(request, noun):
-  noun_query = NounExternal.objects.filter(noun = noun).order_by('?')[:100]
+  noun_query = NounExternal.objects.filter(noun = noun).order_by('?')[:1]
   if noun_query:
-    if noun_query.count() > 100:
-      noun_query = noun_query[:1]
-      this_image = noun_query.get()
-      if this_image.id:
-        return this_image.http_image
+    noun_query = noun_query[:1]
+    this_image = noun_query.get()
+    if this_image.id:
+      return this_image.http_image
 
   random.choice([SearchBing, SearchGoogle]).do_next_search(noun)
 
