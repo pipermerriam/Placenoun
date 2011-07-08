@@ -170,7 +170,7 @@ class NounExternal(NounBase):
 
     self.image.close()
 
-    this_static.image = File(dst_file)
+    this_static.image = File(temp_file)
     this_static.save()
     this_static.width = this_static.image.width
     this_static.height = this_static.image.height
