@@ -14,6 +14,11 @@ def index(request):
   context = RequestContext(request)
   return render_to_response(template, data, context)
 
+def get_by_id(request, id):
+  id = int(id)
+  this_image = NounExternal.objects.get(pk = id)
+  return this_image.http_image
+
 def noun_static(request, noun, width, height):
   width = min(2048, int(width))
   height = min(2048, int(height))
