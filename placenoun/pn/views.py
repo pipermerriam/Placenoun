@@ -23,10 +23,12 @@ def noun_static(request, noun, width, height):
     this_image = noun_query.get()
     return this_image.http_image
 
-  noun_query = NounExternal.objects.filter(available = True, noun = noun, width = width, height = height)
-  if noun_query.exists() and noun_query.exists():
+  noun_query = NounExternal.objects.filter(available = True, noun = noun, width = width, height = height, status__lt = 20)
+  if noun_query.exists():
     this_image = noun_query[0]
-    if this_image.id:
+    if not this_image.image:
+      this_image.populate()
+    if this_image.:
       this_image = this_image.to_static()
       return this_image.http_image
 

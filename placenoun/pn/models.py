@@ -32,16 +32,18 @@ def upload_path(instance, filename):
 
 class NounBase(TimeStampable):
   UNTESTED = 0
-  READY = 1
-  DUPLICATE = 2
-  HTTP_ERROR = 3
-  IOERROR = 4
-  NON_200_RESPONSE = 5
-  MIMETYPE_MISMATCH = 6
+  AVAILABLE = 10
+  IN_USE = 20
+  DUPLICATE = 30
+  HTTP_ERROR = 40
+  IOERROR = 50
+  NON_200_RESPONSE = 60
+  MIMETYPE_MISMATCH = 70
   
   STATUS_CHOICES = (
     (UNTESTED, 'untested'),
-    (READY, 'ready'),
+    (AVAILABLE, 'available'),
+    (IN_USE, 'in_use'),
     (DUPLICATE, 'duplicate'),
     (HTTP_ERROR, 'http_error'),
     (IO_ERROR, 'io_error'),
@@ -143,7 +145,7 @@ class NounExternal(NounBase):
     aspect_gcd = gcd(self.width, self.height)
     self.aspect_width = self.width/aspect_gcd
     self.aspect_height = self.height/aspect_gcd
-    self.satus = self.READY
+    self.satus = self.AVAILABLE
     self.save()
     return True
 
@@ -179,7 +181,7 @@ class NounExternal(NounBase):
     this_static.height = this_static.image.height
     this_static.save()
 
-    self.available = False
+    self.status = self.IN_USE
     self.save()
     return this_static
 
