@@ -7,7 +7,6 @@ import mimetypes
 import tempfile
 import shutil
 
-from decimal import Decimal
 from PIL import Image, ImageFile
 
 from django.core.files import File
@@ -20,6 +19,11 @@ from django.db.models.signals import post_init, post_save
 from placenoun.behaviors.models import *
 from placenoun.fileutilities.main import *
 
+try:
+  from fractions import gcd
+except ImportError:
+  from placenoun.numberutilities.main import gcd
+
 GOOGLE_API_KEY = settings.GOOGLE_API_KEY
 BING_API_KEY = settings.BING_API_KEY
 
@@ -27,13 +31,34 @@ def upload_path(instance, filename):
   return '/'.join([instance.slug[:2].strip('.-_'), instance.slug, datetime.datetime.now().strftime('%Y/%m/%d'), os.path.basename(filename)])
 
 class NounBase(TimeStampable):
+  UNTESTED = 0
+  READY = 1
+  DUPLICATE = 2
+  HTTP_ERROR = 3
+  IOERROR = 4
+  NON_200_RESPONSE = 5
+  MIMETYPE_MISMATCH = 6
+  
+  STATUS_CHOICES = (
+    (UNTESTED, 'untested'),
+    (READY, 'ready'),
+    (DUPLICATE, 'duplicate'),
+    (HTTP_ERROR, 'http_error'),
+    (IO_ERROR, 'io_error'),
+    (NON_200_RESPONSE, 'non_200_response'),
+    (MIMETYPE_MISMATCH, 'mimetype_mismatch'),
+  )
+
   noun = models.CharField(max_length = 100)
   nsfw = models.NullBooleanField(default = None)
+
+  status = models.IntegerField(choices = STATUS_CHOICES, default = 0)
 
   image = models.ImageField(upload_to=upload_path, null = True)
   extension = models.CharField(max_length = 32, null = True)
   mimetype = models.CharField(max_length = 32, null = True)
-  aspect = models.DecimalField(max_digits = 19, decimal_places=10, null = True)
+  aspect_width = models.IntegerField(null = True)
+  aspect_height = models.IntegerField(null = True)
   width = models.IntegerField(null = True)
   height = models.IntegerField(null = True)
   image_hash = models.CharField(max_length = 256, null = True)
@@ -44,39 +69,6 @@ class NounBase(TimeStampable):
   @property
   def slug(self):
     return slugify(self.noun.replace('+',' '))
-
-  def set_image_properties(self):
-    if not self.image:
-      return False
-    self.image.open('r')
-    image_hash = hash_file(self.image.file)
-    self.image.close()
-    if not image_hash == None and type(self).objects.filter(image_hash = image_hash).exists():
-      self.delete()
-      return False
-    self.image_hash = image_hash
-
-    self.extension = os.path.splitext(self.image.path)[1].lower()
-    if self.extension.lower() == '.gif':
-      self.image.open('r')
-      pil_image = Image.open(self.image.file)
-      try:
-        pil_image.seek(1)
-      except EOFError:
-        self.image.close()
-        pass
-      else:
-        self.delete()
-        return False
-    self.mimetype = mimetypes.types_map[self.extension]
-
-    self.width = self.image.width
-    self.height = self.image.height
-    self.aspect = Decimal(self.width)/Decimal(self.height)
-
-    self.save()
-    return True
-
 
   @property
   def http_image(self):
@@ -96,7 +88,6 @@ class NounBase(TimeStampable):
 
 class NounExternal(NounBase):
   url = models.URLField(verify_exists = False, max_length = 300)
-  available = models.BooleanField(default = True)
 
   def __unicode__(self):
     return "<NounExternal: %s>"%(self.id)
@@ -107,53 +98,65 @@ class NounExternal(NounBase):
     try:
       response = urllib2.urlopen(request)
     except urllib2.HTTPError:
-      pass
-    else:
-      if response.code == 200:
-        mimetype = mimetypes.guess_type(self.url)[0]
-        if mimetype == response.headers.type:
-          image_parser = ImageFile.Parser()
-          image_hasher = hashlib.sha256()
-          while True:
-            buf = response.read(1024)
-            if buf:
-              image_parser.feed(buf)
-              image_hasher.update(buf)
-              continue
-            break
-          extension = mimetypes.guess_extension(mimetype)
-          temp = tempfile.NamedTemporaryFile(suffix = extension)
-          new_image = image_parser.close()
-          new_image.save(temp)
-          
-          self.image = File(temp)
-          self.save()
-          try:
-            self.image.open('r')
-            new_image = Image.open(self.image.file)
-            new_image.verify()
-          except IOError:
-            pass
-          else:
-            self.image_hash = image_hasher.hexdigest()
-            self.mimetype = mimetype
-            self.extension = extension
-            self.width = self.image.width
-            self.height = self.image.height
-            self.aspect = Decimal(self.image.width)/Decimal(self.image.height)
-            self.save()
-            return True
-    self.delete()
-    return False
+      self.status = self.HTTP_ERROR
+      self.save()
+      return False
+    if not response.code == 200:
+      self.status = self.NON_200_RESPONSE
+      self.save()
+      return False
+    mimetype = mimetypes.guess_type(self.url)[0]
+    if not mimetype == response.headers.type:
+      self.status = self.MIMETYPE_MISMATCH
+      self.save()
+      return False
+    image_parser = ImageFile.Parser()
+    image_hasher = hashlib.sha256()
+    while True:
+      buf = response.read(1024)
+      if buf:
+        image_parser.feed(buf)
+        image_hasher.update(buf)
+        continue
+      break
+    extension = mimetypes.guess_extension(mimetype)
+    temp = tempfile.NamedTemporaryFile(suffix = extension)
+    new_image = image_parser.close()
+    new_image.save(temp)
+    
+    self.image = File(temp)
+    self.save()
+    try:
+      self.image.open('r')
+      new_image = Image.open(self.image.file)
+      new_image.verify()
+    except IOError:
+      self.status = self.IO_ERROR
+      self.save()
+      return False
+    self.image_hash = image_hasher.hexdigest()
+    self.mimetype = mimetype
+    self.extension = extension
+    self.width = self.image.width
+    self.height = self.image.height
+
+    aspect_gcd = gcd(self.width, self.height)
+    self.aspect_width = self.width/aspect_gcd
+    self.aspect_height = self.height/aspect_gcd
+    self.satus = self.READY
+    self.save()
+    return True
 
   def to_static(self, size = None):
     this_static, created = NounStatic.objects.get_or_create(
       parent = self, 
       noun = self.noun, 
+      status = self.READY
       nsfw = self.nsfw,
       extension = self.extension,
       mimetype = self.mimetype,
-      aspect = self.aspect)
+      aspect_width = self.aspect_width,
+      aspect_height = self.aspect_height)
     if not created:
       return this_static
     temp_file = tempfile.NamedTemporaryFile(suffix = self.extension)
@@ -179,12 +182,6 @@ class NounExternal(NounBase):
     self.available = False
     self.save()
     return this_static
-
-def populate_image(sender, instance, **kwargs):
-  if instance.url and not instance.image and instance.id:
-    instance.populate()
-
-post_init.connect(populate_image, NounExternal)
 
 class NounStatic(NounBase):
   parent = models.ForeignKey(NounExternal, unique = True)
