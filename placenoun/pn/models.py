@@ -139,7 +139,7 @@ class NounExternal(NounBase):
     
   @class_method
   def do_knn(cls, width, height):
-    slope = 
+    slope = float(width)/height
 
   def populate(self):
     request = urllib2.Request(self.url)
