@@ -74,14 +74,14 @@ class NounBase(TimeStampable):
     return slugify(self.noun.replace('+',' '))
 
   def compare(self, target_width, target_height):
-    width = self.aspect_width
-    height = self.aspect_hieght
+    width = self.width
+    height = self.height
     slope = float(target_height)/target_width
     scale = 1.0
     if width < target_width:
-      scale = max(2049.0/width, scale)
+      scale = max(float(2048+abs(width-target_width)/width, scale)
     if height < target_height:
-      scale = max(2049.0/height, scale)
+      scale = max(float(2048+abs(height-target_height)/height, scale)
     if not scale == 1.0:
       width = int(width*scale)
       height = int(height*scale)
@@ -90,6 +90,8 @@ class NounBase(TimeStampable):
     dist_a = ((width-x)**2+(height-y)**2)**0.5 
     dist_b = ((target_width-x)**2+(target_height-y)**2)**0.5 + 1
 
+    if not width == self.width or not height == self.height:
+      return dist_a + dist_b
     return dist_a + log(dist_b)
 
   @property
@@ -113,6 +115,28 @@ class NounExternal(NounBase):
 
   def __unicode__(self):
     return "<NounExternal: %s>"%(self.id)
+
+  @class_method
+  def do_knn(cls, slope, radius, limit = 30):
+    left_bound = "(height-%s)/%s"%(radius, slope)
+    right_bound = "(height+%s)/%s"%(radius, slope)
+    top_bound = "width*%s-%s"%(slope, radius)
+    bottom_bound = "width*%s+%s"%(slope, radius),
+    
+    sql_statements = (
+      "SELECT *,",
+      left_bound +',',
+      right_bound +',',
+      top_bound +',',
+      bottom_bound +',',
+     "FROM `pn_nounexternal`",
+     "WHERE ((width<=%s AND width>=%s) AND"%(right_bound, left_bound),
+     "(height<=%s AND height>=%s))"%(top_bound, bottom_bound),
+     "LIMIT 0, %s"%limit,
+     )
+    sql_query = ' '.join(sql_statements)
+    return cls.objects.raw(sql_query)
+    
 
   def populate(self):
     request = urllib2.Request(self.url)
