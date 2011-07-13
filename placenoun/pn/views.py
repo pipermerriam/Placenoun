@@ -1,9 +1,12 @@
 import random
 
-from decimal import Decimal, getcontext
-
 from django.shortcuts import render_to_response
 from django.template import RequestContext
+
+try:
+  from fractions import gcd
+except ImportError:
+  from placenoun.numberutilities.main import gcd
 
 from placenoun.pn.models import NounStatic, NounExternal, SearchGoogle, SearchBing
 
@@ -23,23 +26,24 @@ def noun_static(request, noun, width, height):
     this_image = noun_query.get()
     return this_image.http_image
 
-  noun_query = NounExternal.objects.filter(available = True, noun = noun, width = width, height = height, status__lt = 20)
+  noun_query = NounExternal.objects.filter(noun = noun, width = width, height = height, status__lt = 20)
   if noun_query.exists():
     this_image = noun_query[0]
     if not this_image.image:
       this_image.populate()
-    if this_image.:
+    if this_image.status == 10:
       this_image = this_image.to_static()
       return this_image.http_image
 
-  num_part = str(Decimal(width)/Decimal(height)).split('.')[0]
-  getcontext().prec = len(num_part) + 10
-  aspect = Decimal(width)/Decimal(height)
-  noun_query = NounExternal.objects.filter(available = True, noun= noun, aspect = aspect, width__gte = width, height__gte = height)
-  q2 = noun_query
-  if noun_query.exists() and noun_query.exists():
+  aspect_gcd = gcd(width, height)
+  aspect_width = width/aspect_gcd
+  aspect_hight = height/aspect_gcd
+  noun_query = NounExternal.objects.filter(noun= noun, width__gte = width, height__gte = height, aspect_width = aspect_width, aspect_height = aspect_height, status__lt = 20)
+  if noun_query.exists():
     this_image = noun_query[0]
-    if this_image.id:
+    if not this_image.image:
+      this_image.populate()
+    if this_image.status == 10:
       this_image = this_image.to_static(size=(width, height))
       return this_image.http_image
 
@@ -52,13 +56,18 @@ def noun_static(request, noun, width, height):
   radius = 1
   while True:
     noun_query = NounExternal.objects.filter(noun = noun).filter(
-      width__lte = width + radius, height__lte = height + radius).filter(
-      width__gte = width - radius, height__gte = height - radius)
-    if not noun_query.exists() and noun_query.exists():
+      width__lte = aspect_width + radius, 
+      height__lte = aspect_height + radius).filter(
+      width__gte = aspect_width - radius, 
+      height__gte = aspect_height - radius)
+    if not noun_query.exists():
       radius = radius*2
       continue
-    noun_query = sorted(noun_query, key = lambda noun_obj: ( (width-noun_obj.width)**2 + (height-noun_obj.height)**2)**0.5 )
-    this_image = noun_query[0]
+    noun_query = sorted(noun_query, key = lambda noun_obj: noun_obj(width, height) )
+    noun_query.reverse()
+    while noun_query:
+      this_image = noun_query.pop()
+      if not 
     if not this_image.id:
       continue
     return this_image.http_image_resized(size=(width, height))

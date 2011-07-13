@@ -3,6 +3,7 @@ import urllib2
 import os
 import simplejson
 import datetime
+from math import log
 import mimetypes
 import tempfile
 import shutil
@@ -46,7 +47,7 @@ class NounBase(TimeStampable):
     (IN_USE, 'in_use'),
     (DUPLICATE, 'duplicate'),
     (HTTP_ERROR, 'http_error'),
-    (IO_ERROR, 'io_error'),
+    (IOERROR, 'io_error'),
     (NON_200_RESPONSE, 'non_200_response'),
     (MIMETYPE_MISMATCH, 'mimetype_mismatch'),
   )
@@ -71,6 +72,25 @@ class NounBase(TimeStampable):
   @property
   def slug(self):
     return slugify(self.noun.replace('+',' '))
+
+  def compare(self, target_width, target_height):
+    width = self.aspect_width
+    height = self.aspect_hieght
+    slope = float(target_height)/target_width
+    scale = 1.0
+    if width < target_width:
+      scale = max(2049.0/width, scale)
+    if height < target_height:
+      scale = max(2049.0/height, scale)
+    if not scale == 1.0:
+      width = int(width*scale)
+      height = int(height*scale)
+    x = (slope*height+width)/(slope**2+1)
+    y = slope*x
+    dist_a = ((width-x)**2+(height-y)**2)**0.5 
+    dist_b = ((target_width-x)**2+(target_height-y)**2)**0.5 + 1
+
+    return dist_a + log(dist_b)
 
   @property
   def http_image(self):
@@ -133,7 +153,7 @@ class NounExternal(NounBase):
       new_image = Image.open(self.image.file)
       new_image.verify()
     except IOError:
-      self.status = self.IO_ERROR
+      self.status = self.IOERROR
       self.save()
       return False
     self.image_hash = image_hasher.hexdigest()
@@ -153,7 +173,7 @@ class NounExternal(NounBase):
     this_static, created = NounStatic.objects.get_or_create(
       parent = self, 
       noun = self.noun, 
-      status = self.READY
+      status = self.READY,
       nsfw = self.nsfw,
       extension = self.extension,
       mimetype = self.mimetype,
