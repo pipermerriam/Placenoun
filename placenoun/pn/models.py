@@ -117,21 +117,22 @@ class NounExternal(NounBase):
     return "<NounExternal: %s>"%(self.id)
 
   @classmethod
-  def get_knn_window(cls, slope, radius, limit = 30):
+  def get_knn_window(cls, noun, slope, radius, limit = 30):
     left_bound = "(height-%s)/%s"%(radius, slope)
     right_bound = "(height+%s)/%s"%(radius, slope)
     top_bound = "width*%s+%s"%(slope, radius)
-    bottom_bound = "width*%s-%s"%(slope, radius),
+    bottom_bound = "width*%s-%s"%(slope, radius)
     
     sql_statements = (
       "SELECT *,",
       left_bound +',',
       right_bound +',',
       top_bound +',',
-      bottom_bound +',',
+      bottom_bound,
      "FROM `pn_nounexternal`",
-     "WHERE ((width<=%s AND width>=%s) AND"%(right_bound, left_bound),
-     "(height<=%s AND height>=%s))"%(top_bound, bottom_bound),
+     "WHERE (((width<=%s AND width>=%s) AND"%(right_bound, left_bound),
+     "(height<=%s AND height>=%s)) AND"%(top_bound, bottom_bound),
+     "(status<30 AND noun='%s'))"%noun,
      "LIMIT 0, %s"%limit,
      )
     sql_query = ' '.join(sql_statements)
@@ -154,6 +155,7 @@ class NounExternal(NounBase):
       self.status = self.NON_200_RESPONSE
       self.save()
       return False
+    mimetypes.init()
     mimetype = mimetypes.guess_type(self.url)[0]
     if not mimetype == response.headers.type:
       self.status = self.MIMETYPE_MISMATCH
@@ -169,6 +171,8 @@ class NounExternal(NounBase):
         continue
       break
     extension = mimetypes.guess_extension(mimetype)
+    if extension in ('.jpe', '.jpg') :
+      extension = '.jpeg'
     temp = tempfile.NamedTemporaryFile(suffix = extension)
     new_image = image_parser.close()
     new_image.save(temp)
@@ -383,7 +387,11 @@ class SearchGoogle(Search):
         noun = self.query,
         )
       if created:
-        new_image.aspect = Decimal(result['width'])/Decimal(result['height'])
+        width = int(result['width'])
+        height = int(result['height'])
+        aspect_gcd = gcd(width, height)
+        new_image.aspect_width = width/aspect_gcd
+        new_image.aspect_height = height/aspect_gcd
 
     return True
 
@@ -459,6 +467,10 @@ class SearchBing(Search):
         noun = self.query,
         )
       if created:
-        new_image.aspect = Decimal(result['Width'])/Decimal(result['Height'])
+        width = int(result['Width'])
+        height = int(result['Height'])
+        aspect_gcd = gcd(width, height)
+        new_image.aspect_width = width/aspect_gcd
+        new_image.aspect_height = height/aspect_gcd
 
     return True
