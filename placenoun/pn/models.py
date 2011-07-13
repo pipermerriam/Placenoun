@@ -79,9 +79,9 @@ class NounBase(TimeStampable):
     slope = float(target_height)/target_width
     scale = 1.0
     if width < target_width:
-      scale = max(float(2048+abs(width-target_width)/width, scale)
+      scale = max(float(2048+abs(width-target_width)/width), scale)
     if height < target_height:
-      scale = max(float(2048+abs(height-target_height)/height, scale)
+      scale = max(float(2048+abs(height-target_height)/height), scale)
     if not scale == 1.0:
       width = int(width*scale)
       height = int(height*scale)
@@ -117,11 +117,11 @@ class NounExternal(NounBase):
     return "<NounExternal: %s>"%(self.id)
 
   @class_method
-  def do_knn(cls, slope, radius, limit = 30):
+  def get_knn_window(cls, slope, radius, limit = 30):
     left_bound = "(height-%s)/%s"%(radius, slope)
     right_bound = "(height+%s)/%s"%(radius, slope)
-    top_bound = "width*%s-%s"%(slope, radius)
-    bottom_bound = "width*%s+%s"%(slope, radius),
+    top_bound = "width*%s+%s"%(slope, radius)
+    bottom_bound = "width*%s-%s"%(slope, radius),
     
     sql_statements = (
       "SELECT *,",
@@ -137,6 +137,9 @@ class NounExternal(NounBase):
     sql_query = ' '.join(sql_statements)
     return cls.objects.raw(sql_query)
     
+  @class_method
+  def do_knn(cls, width, height):
+    slope = 
 
   def populate(self):
     request = urllib2.Request(self.url)
