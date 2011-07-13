@@ -60,6 +60,9 @@ def noun_static(request, noun, width, height):
     noun_query = noun_query[0:]
     if not noun_query:
       radius = radius*2
+      if radius > 64:
+        radius = 1
+        random.choice([SearchBing, SearchGoogle]).do_next_search(noun)
       continue
 
     noun_query = sorted(noun_query, key = lambda noun_obj: noun_obj.compare(width, height) )
