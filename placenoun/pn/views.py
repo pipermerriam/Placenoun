@@ -21,6 +21,10 @@ def index(request):
 def get_by_id(request, id):
   id = int(id)
   this_image = NounExternal.objects.get(pk = id)
+  if not this_image.image:
+    this_image.populate()
+  if not this_image.status < 30:
+    return Http404
   return this_image.http_image
 
 def noun_static(request, noun, width, height):
