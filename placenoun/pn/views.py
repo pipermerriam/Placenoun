@@ -1,9 +1,12 @@
 import random
 
-from decimal import Decimal, getcontext
-
 from django.shortcuts import render_to_response
 from django.template import RequestContext
+
+try:
+  from fractions import gcd
+except ImportError:
+  from placenoun.numberutilities.main import gcd
 
 from placenoun.pn.models import NounStatic, NounExternal, SearchGoogle, SearchBing
 
@@ -28,21 +31,24 @@ def noun_static(request, noun, width, height):
     this_image = noun_query.get()
     return this_image.http_image
 
-  noun_query = NounExternal.objects.filter(available = True, noun = noun, width = width, height = height)[:1]
-  if noun_query:
-    this_image = noun_query.get()
-    if this_image.id:
+  noun_query = NounExternal.objects.filter(noun = noun, width = width, height = height, status__lt = 20)
+  if noun_query.exists():
+    this_image = noun_query[0]
+    if not this_image.image:
+      this_image.populate()
+    if this_image.status == 10:
       this_image = this_image.to_static()
       return this_image.http_image
 
-  num_part = str(Decimal(width)/Decimal(height)).split('.')[0]
-  getcontext().prec = len(num_part) + 10
-  aspect = Decimal(width)/Decimal(height)
-  noun_query = NounExternal.objects.filter(available = True, noun= noun, aspect = aspect, width__gte = width, height__gte = height)[:1]
-  q2 = noun_query
-  if noun_query:
-    this_image = noun_query.get()
-    if this_image.id:
+  aspect_gcd = gcd(width, height)
+  aspect_width = width/aspect_gcd
+  aspect_height = height/aspect_gcd
+  noun_query = NounExternal.objects.filter(noun= noun, width__gte = width, height__gte = height, aspect_width = aspect_width, aspect_height = aspect_height, status__lt = 20)
+  if noun_query.exists():
+    this_image = noun_query[0]
+    if not this_image.image:
+      this_image.populate()
+    if this_image.status == 10:
       this_image = this_image.to_static(size=(width, height))
       return this_image.http_image
 
@@ -53,35 +59,48 @@ def noun_static(request, noun, width, height):
   random.choice([SearchBing, SearchGoogle]).do_next_search(noun)
 
   radius = 1
+  slope = float(height)/width
   while True:
-    noun_query = NounExternal.objects.filter(noun = noun).filter(
-      width__lte = width + radius, height__lte = height + radius).filter(
-      width__gte = width - radius, height__gte = height - radius)[:10]
+    noun_query = NounExternal.get_knn_window(noun, slope, radius)
+    noun_query = noun_query[0:]
     if not noun_query:
       radius = radius*2
-      if radius > 2000:
-        random.choice([SearchBing, SearchGoogle]).do_next_search(noun)
+      if radius > 64:
         radius = 1
+        random.choice([SearchBing, SearchGoogle]).do_next_search(noun)
       continue
-    noun_query = sorted(noun_query, key = lambda noun_obj: ( (width-noun_obj.width)**2 + (height-noun_obj.height)**2)**0.5 )[:1]
-    this_image = noun_query[0]
-    if not this_image.id:
-      continue
-    return this_image.http_image_resized(size=(width, height))
+
+    noun_query = sorted(noun_query, key = lambda noun_obj: noun_obj.compare(width, height) )
+    noun_query.reverse()
+    while noun_query:
+      this_image = noun_query.pop()
+      if not this_image.image:
+        this_image.populate()
+      if not this_image.image:
+        continue
+      ret = this_image.http_image_resized(size=(width, height))
+      return this_image.http_image_resized(size=(width, height))
 
 def noun(request, noun):
-  noun_query = NounExternal.objects.filter(noun = noun).order_by('?')[:1]
-  if noun_query:
-    this_image = noun_query.get()
-    if this_image.id:
-      return this_image.http_image
+  noun_query = NounExternal.objects.filter(noun = noun, status__lte = 30)
+  if noun_query.exists():
+    if noun_query.count() > 100:
+      this_image = noun_query.order_by('?')[0]
+      if not this_image.image:
+        this_image.populate()
+      if this_image.image:
+        return this_image.http_image
 
   random.choice([SearchBing, SearchGoogle]).do_next_search(noun)
 
   while True:
-    noun_query = NounExternal.objects.filter(noun = noun).order_by('?')[:1]
-    if noun_query:
-      this_image = noun_query.get()
-      if not this_image.id:
+    noun_query = NounExternal.objects.filter(noun = noun, status__lte = 30)
+    if noun_query.exists():
+      this_image = noun_query.order_by('?')[0]
+      if not this_image.image:
+        this_image.populate()
+      if not this_image.image:
         continue
       return this_image.http_image
+    else:
+      random.choice([SearchBing, SearchGoogle]).do_next_search(noun)
