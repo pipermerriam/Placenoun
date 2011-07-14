@@ -209,7 +209,7 @@ class NounExternal(NounBase):
     this_static, created = NounStatic.objects.get_or_create(
       parent = self, 
       noun = self.noun, 
-      status = self.READY,
+      status = self.IN_USE,
       nsfw = self.nsfw,
       extension = self.extension,
       mimetype = self.mimetype,
