@@ -276,7 +276,7 @@ class Search(TimeStampable):
 class SearchGoogle(Search):
   response_code = models.CharField(max_length = 100)
   result_count = models.BigIntegerField(default = 0)
-  page = models.IntegerField(default = -1)
+  page = models.IntegerField(default = 0)
   page_size = models.IntegerField(default = 8)
   imgsz = models.CharField(max_length = 10, default = '')
   restrict = models.CharField(max_length = 32, default = '')
