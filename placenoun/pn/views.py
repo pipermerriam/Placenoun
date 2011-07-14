@@ -1,5 +1,6 @@
 import random
 
+from django.http import Http404
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 
@@ -59,13 +60,17 @@ def noun_static(request, noun, width, height):
   random.choice([SearchBing, SearchGoogle]).do_next_search(noun)
 
   radius = 1
+  search_max = 64
   slope = float(height)/width
   while True:
     noun_query = NounExternal.get_knn_window(noun, slope, radius)
     noun_query = noun_query[0:]
     if not noun_query:
       radius = radius*2
-      if radius > 64:
+      if radius > search_max:
+        search_max = search_max*2
+        if search_max > 2048:
+          return Http404
         radius = 1
         random.choice([SearchBing, SearchGoogle]).do_next_search(noun)
       continue
