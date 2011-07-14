@@ -9,6 +9,8 @@ ADMINS = (
 
 MANAGERS = ADMINS
 
+MAX_IMAGE_SIZE = 2048
+
 try:
   from site_settings import DATABASES
 except ImportError:

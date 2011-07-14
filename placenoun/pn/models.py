@@ -20,6 +20,8 @@ from django.db.models.signals import post_init, post_save
 from placenoun.behaviors.models import *
 from placenoun.fileutilities.main import *
 
+from placenoun.numberutilities.main import hilbert_from_xy
+
 try:
   from fractions import gcd
 except ImportError:
@@ -27,6 +29,7 @@ except ImportError:
 
 GOOGLE_API_KEY = settings.GOOGLE_API_KEY
 BING_API_KEY = settings.BING_API_KEY
+MAX_IMAGE_SIZE = settings.MAX_IMAGE_SIZE
 
 def upload_path(instance, filename):
   return '/'.join([instance.slug[:2].strip('.-_'), instance.slug, datetime.datetime.now().strftime('%Y/%m/%d'), os.path.basename(filename)])
@@ -113,6 +116,7 @@ class NounBase(TimeStampable):
     return response
 
 class NounExternal(NounBase):
+  hilbert_hash = models.BigIntegerField(null = True)
   url = models.URLField(verify_exists = False, max_length = 300)
 
   def __unicode__(self):
@@ -405,6 +409,7 @@ class SearchGoogle(Search):
         width = width,
         height = height,
         noun = self.query,
+        hilbert_hash = hilbert_from_xy(MAX_IMAGE_SIZE, width, height)
         aspect_width = width/aspect_gcd,
         aspect_height = height/aspect_gcd,
         )
@@ -492,6 +497,7 @@ class SearchBing(Search):
         width = width,
         height = height,
         noun = self.query,
+        hilbert_hash = hilbert_from_xy(MAX_SEARCH_SIZE, width, height) 
         aspect_width = width/aspect_gcd,
         aspect_height = height/aspect_gcd,
         )

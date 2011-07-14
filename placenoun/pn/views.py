@@ -1,5 +1,6 @@
 import random
 
+from django.conf import settings
 from django.http import Http404
 from django.shortcuts import render_to_response
 from django.template import RequestContext
@@ -10,6 +11,8 @@ except ImportError:
   from placenoun.numberutilities.main import gcd
 
 from placenoun.pn.models import NounStatic, NounExternal, SearchGoogle, SearchBing
+
+MAX_IMAGE_SIZE = settings.MAX_IMAGE_SIZE
 
 def index(request):
   template = 'index.html'
@@ -28,8 +31,8 @@ def get_by_id(request, id):
   return this_image.http_image
 
 def noun_static(request, noun, width, height):
-  width = min(2048, int(width))
-  height = min(2048, int(height))
+  width = min(MAX_IMAGE_SIZE, int(width))
+  height = min(MAX_IMAGE_SIZE, int(height))
 
   noun_query = NounStatic.objects.filter(noun = noun, width = width, height = height)[:1]
   if noun_query:
@@ -63,11 +66,14 @@ def noun_static(request, noun, width, height):
 
   random.choice([SearchBing, SearchGoogle]).do_next_search(noun)
 
-  radius = 1
-  search_max = 64
+  radius = 128
+  search_max = 512
   slope = float(height)/width
+  hilbert_hash = hilbert_from_xy(MAX_IMAGE_SIZE, width, height)
   while True:
-    noun_query = NounExternal.get_knn_window(noun, slope, radius)
+    noun_query = NounExternal.objects.filter(
+      noun = noun, 
+      hilbert_hash__gte, radius)
     noun_query = noun_query[0:]
     if not noun_query:
       radius = radius*2
@@ -75,7 +81,7 @@ def noun_static(request, noun, width, height):
         search_max = search_max*2
         if search_max > 2048:
           return Http404
-        radius = 1
+        radius = 128
         random.choice([SearchBing, SearchGoogle]).do_next_search(noun)
       continue
 
