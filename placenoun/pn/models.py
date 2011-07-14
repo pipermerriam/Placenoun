@@ -388,18 +388,26 @@ class SearchGoogle(Search):
 
     # Iterate through the results and create blank image objects.
     for result in data['responseData']['results']:
-      new_image, created = NounExternal.objects.get_or_create(
+      noun_query = NounExternal.objects.filter(
         url = result['url'],
         width = result['width'],
         height = result['height'],
         noun = self.query,
+        ).exists()
+      if noun_query:
+        continue
+      width = int(result['width'])
+      height = int(result['height'])
+      aspect_gcd = gcd(width, height)
+
+      new_image = NounExternal.objects.create(
+        url = result['url'],
+        width = width,
+        height = height,
+        noun = self.query,
+        aspect_width = width/aspect_gcd
+        aspect_height = height/aspect_gcd
         )
-      if created:
-        width = int(result['width'])
-        height = int(result['height'])
-        aspect_gcd = gcd(width, height)
-        new_image.aspect_width = width/aspect_gcd
-        new_image.aspect_height = height/aspect_gcd
     return True
 
 class SearchBing(Search):
@@ -467,16 +475,24 @@ class SearchBing(Search):
 
     # Iterate through the results and create blank image objects.
     for result in data['SearchResponse']['Image']['Results']:
-      new_image, created = NounExternal.objects.get_or_create(
+      noun_query = NounExternal.objects.filter(
         url = result['MediaUrl'],
         width = result['Width'],
         height = result['Height'],
         noun = self.query,
+        ).exists()
+      if nount_query:
+        continue
+      width = int(result['Width'])
+      height = int(result['Height'])
+      aspect_gcd = gcd(width, height)
+
+      new_imaged = NounExternal.objects.create(
+        url = result['MediaUrl'],
+        width = width,
+        height = height,
+        noun = self.query,
+        aspect_width = width/aspect_gcd
+        aspect_height = height/aspect_gcd
         )
-      if created:
-        width = int(result['Width'])
-        height = int(result['Height'])
-        aspect_gcd = gcd(width, height)
-        new_image.aspect_width = width/aspect_gcd
-        new_image.aspect_height = height/aspect_gcd
     return True
