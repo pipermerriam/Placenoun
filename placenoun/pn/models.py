@@ -405,8 +405,8 @@ class SearchGoogle(Search):
         width = width,
         height = height,
         noun = self.query,
-        aspect_width = width/aspect_gcd
-        aspect_height = height/aspect_gcd
+        aspect_width = width/aspect_gcd,
+        aspect_height = height/aspect_gcd,
         )
     return True
 
@@ -492,7 +492,7 @@ class SearchBing(Search):
         width = width,
         height = height,
         noun = self.query,
-        aspect_width = width/aspect_gcd
-        aspect_height = height/aspect_gcd
+        aspect_width = width/aspect_gcd,
+        aspect_height = height/aspect_gcd,
         )
     return True
