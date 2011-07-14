@@ -481,7 +481,7 @@ class SearchBing(Search):
         height = result['Height'],
         noun = self.query,
         ).exists()
-      if nount_query:
+      if noun_query:
         continue
       width = int(result['Width'])
       height = int(result['Height'])
