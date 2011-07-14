@@ -201,7 +201,7 @@ class NounExternal(NounBase):
     aspect_gcd = gcd(self.width, self.height)
     self.aspect_width = self.width/aspect_gcd
     self.aspect_height = self.height/aspect_gcd
-    self.satus = self.AVAILABLE
+    self.status = self.AVAILABLE
     self.save()
     return True
 
