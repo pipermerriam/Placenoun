@@ -12,7 +12,8 @@ except ImportError:
 
 from placenoun.pn.models import NounStatic, NounExternal, SearchGoogle, SearchBing
 
-MAX_IMAGE_SIZE = settings.MAX_IMAGE_SIZE
+MAX_IMAGE_WIDTH = settings.MAX_IMAGE_WIDTH
+MAX_IMAGE_HEIGHT = settings.MAX_IMAGE_HEIGHT
 
 def index(request):
   template = 'index.html'
@@ -31,8 +32,8 @@ def get_by_id(request, id):
   return this_image.http_image
 
 def noun_static(request, noun, width, height):
-  width = min(2048, int(width))
-  height = min(2048, int(height))
+  width = min(MAX_IMAGE_WIDTH, int(width))
+  height = min(MAX_IMAGE_HEIGHT, int(height))
 
   noun_query = NounStatic.objects.filter(noun = noun, width = width, height = height)[:1]
   if noun_query:
