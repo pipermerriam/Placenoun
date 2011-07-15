@@ -403,7 +403,7 @@ class SearchGoogle(Search):
         width = width,
         height = height,
         noun = self.query,
-        aspec = float(width)/height,
+        aspect = float(width)/height,
         )
     return True
 
