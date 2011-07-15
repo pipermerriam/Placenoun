@@ -3,6 +3,18 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 	<head>
 		<title>Placenoun</title>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script> 
+    <script>
+    $(function() {
+      $("form").submit(function() {
+        var query = $("#search").val();
+        query = query.replace(' ','+');
+        query = query.replace(/[^a-zA-Z+]/g,'');
+        window.location = query;
+        return false;
+      });
+    });
+    </script>
 	</head>
 	<body>
 		<div>
@@ -14,6 +26,10 @@
 			
 			<div id="main">
         <p>Placenoun is the combination of <a href="http://www.fuckyeahnouns.com" target="_blank">FuckYeahNouns.com</a> and <a href="http://www.placekitten.com" target="_blank">PlaceKitten.com</a></p>
+        <form>
+          <label for="search">Show me a</label>
+          <input id="search" type="text">
+        </form>
 			</div>
 			
 			<div class="clear"></div>

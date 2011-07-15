@@ -32,6 +32,7 @@ def get_by_id(request, id):
   return this_image.http_image
 
 def noun_static(request, noun, width, height):
+  noun = noun.lstrip('+').rstrip('+')
   width = min(MAX_IMAGE_WIDTH, int(width))
   height = min(MAX_IMAGE_HEIGHT, int(height))
 
@@ -92,6 +93,7 @@ def noun_static(request, noun, width, height):
       return this_image.http_image_resized(size=(width, height))
 
 def noun(request, noun):
+  noun = noun.lstrip('+').rstrip('+')
   noun_query = NounExternal.objects.filter(noun = noun, status__lte = 30)
   if noun_query.exists():
     if noun_query.count() > 100:
