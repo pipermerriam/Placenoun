@@ -49,10 +49,8 @@ def noun_static(request, noun, width, height):
       this_image = this_image.to_static()
       return this_image.http_image
 
-  aspect_gcd = gcd(width, height)
-  aspect_width = width/aspect_gcd
-  aspect_height = height/aspect_gcd
-  noun_query = NounExternal.objects.filter(noun= noun, width__gte = width, height__gte = height, aspect_width = aspect_width, aspect_height = aspect_height, status__lt = 20)
+  aspect = float(width)/height
+  noun_query = NounExternal.objects.filter(noun= noun, width__gte = width, height__gte = height, aspect = aspect, status__lt = 20)
   if noun_query.exists():
     this_image = noun_query[0]
     if not this_image.image:
