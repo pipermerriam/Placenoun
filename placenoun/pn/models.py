@@ -133,12 +133,15 @@ class NounExternal(NounBase):
     upper_y = arm_dist*sin(upper_theta)
     lower_x = arm_dist*cos(lower_theta)
     lower_y = arm_dist*sin(lower_theta)
-    upper_aspect = 1.0/float(upper_x)/upper_y
-    lower_aspect = 1.0/float(lower_x)/lower_y
+    lower_aspect = float(upper_x)/upper_y
+    upper_aspect = float(lower_x)/lower_y
 
     if raw:
       return lower_aspect, upper_aspect
+
+    
     return cls.objects.filter(noun = noun, status__lt = 30, aspect__lte = upper_aspect, aspect__gte = lower_aspect)
+    
 
     
   @classmethod
