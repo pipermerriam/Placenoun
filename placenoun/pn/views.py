@@ -1,5 +1,6 @@
 import random
 
+from django.conf import settings
 from django.http import Http404
 from django.shortcuts import render_to_response
 from django.template import RequestContext
@@ -10,6 +11,8 @@ except ImportError:
   from placenoun.numberutilities.main import gcd
 
 from placenoun.pn.models import NounStatic, NounExternal, SearchGoogle, SearchBing
+
+MAX_IMAGE_SIZE = settings.MAX_IMAGE_SIZE
 
 def index(request):
   template = 'index.html'
@@ -64,12 +67,11 @@ def noun_static(request, noun, width, height):
   random.choice([SearchBing, SearchGoogle]).do_next_search(noun)
 
   radius = 1
-  search_max = 64
+  search_max = 32
   slope = float(height)/width
   while True:
-    noun_query = NounExternal.get_knn_window(noun, slope, radius)
-    noun_query = noun_query[0:]
-    if not noun_query:
+    noun_query = NounExternal.get_knn_window(noun, width, height, radius)
+    if not noun_query.exists():
       radius = radius*2
       if radius > search_max:
         search_max = search_max*2

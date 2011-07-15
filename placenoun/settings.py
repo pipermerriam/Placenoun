@@ -7,6 +7,9 @@ ADMINS = (
     # ('Your Name', 'your_email@example.com'),
 )
 
+MAX_IMAGE_WIDTH = 2048
+MAX_IMAGE_HEIGHT = 2048
+
 MANAGERS = ADMINS
 
 try:

@@ -3,12 +3,12 @@ import urllib2
 import os
 import simplejson
 import datetime
-from math import log
 import mimetypes
 import tempfile
 import shutil
 
 from PIL import Image, ImageFile
+from math import log, sin, cos, tan, asin, acos, atan, pi
 
 from django.core.files import File
 from django.conf import settings
@@ -19,6 +19,7 @@ from django.db.models.signals import post_init, post_save
 
 from placenoun.behaviors.models import *
 from placenoun.fileutilities.main import *
+from placenoun.numberutilities.main import get_edge_projection
 
 try:
   from fractions import gcd
@@ -27,6 +28,8 @@ except ImportError:
 
 GOOGLE_API_KEY = settings.GOOGLE_API_KEY
 BING_API_KEY = settings.BING_API_KEY
+MAX_IMAGE_WIDTH = settings.MAX_IMAGE_WIDTH
+MAX_IMAGE_HEIGHT = settings.MAX_IMAGE_HEIGHT
 
 def upload_path(instance, filename):
   return '/'.join([instance.slug[:2].strip('.-_'), instance.slug, datetime.datetime.now().strftime('%Y/%m/%d'), os.path.basename(filename)])
@@ -62,8 +65,7 @@ class NounBase(TimeStampable):
   image = models.ImageField(upload_to=upload_path, null = True)
   extension = models.CharField(max_length = 32, null = True)
   mimetype = models.CharField(max_length = 32, null = True)
-  aspect_width = models.IntegerField(null = True)
-  aspect_height = models.IntegerField(null = True)
+  aspect = models.FloatField(null = True)
   width = models.IntegerField(null = True)
   height = models.IntegerField(null = True)
   image_hash = models.CharField(max_length = 256, null = True)
@@ -119,28 +121,25 @@ class NounExternal(NounBase):
     return "<NounExternal: %s>"%(self.id)
 
   @classmethod
-  def get_knn_window(cls, noun, slope, radius, limit = 30, raw = False):
-    left_bound = "(height-%s)/%s"%(radius, slope)
-    right_bound = "(height+%s)/%s"%(radius, slope)
-    top_bound = "width*%s+%s"%(slope, radius)
-    bottom_bound = "width*%s-%s"%(slope, radius)
-    
-    sql_statements = (
-      "SELECT *,",
-      left_bound +',',
-      right_bound +',',
-      top_bound +',',
-      bottom_bound,
-     "FROM `pn_nounexternal`",
-     "WHERE (((width<=%s AND width>=%s) AND"%(right_bound, left_bound),
-     "(height<=%s AND height>=%s)) AND"%(top_bound, bottom_bound),
-     "(status<30 AND noun='%s'))"%noun,
-     "LIMIT 0, %s"%limit,
-     )
-    sql_query = ' '.join(sql_statements)
+  def get_knn_window(cls, noun, width, height, radius, raw = False):
+    x_edge, y_edge = get_edge_projection(MAX_IMAGE_WIDTH, MAX_IMAGE_HEIGHT, width, height)
+    dist = (x_edge**2 + y_edge**2)**0.5
+    theta = atan(float(y_edge)/x_edge)
+    delta_theta = atan(float(radius)/dist)
+    arm_dist = (dist**2+radius**2)**0.5
+    upper_theta = min(theta + delta_theta, pi/2)
+    lower_theta = max(theta - delta_theta, 0)
+    upper_x = arm_dist*cos(upper_theta)
+    upper_y = arm_dist*sin(upper_theta)
+    lower_x = arm_dist*cos(lower_theta)
+    lower_y = arm_dist*sin(lower_theta)
+    upper_aspect = float(upper_x)/upper_y
+    lower_aspect = float(lower_x)/lower_y
+
     if raw:
-      return sql_query
-    return cls.objects.raw(sql_query)
+      return lower_aspect, upper_aspect
+    return cls.objects.filter(noun = noun, status__lt = 30, aspect__lte = upper_aspect, aspect__gte = lower_aspect)
+
     
   @classmethod
   def do_knn(cls, width, height):
@@ -200,9 +199,7 @@ class NounExternal(NounBase):
     self.width = self.image.width
     self.height = self.image.height
 
-    aspect_gcd = gcd(self.width, self.height)
-    self.aspect_width = self.width/aspect_gcd
-    self.aspect_height = self.height/aspect_gcd
+    self.aspect = float(self.width)/self.height
     self.status = self.AVAILABLE
     self.save()
     return True
@@ -215,8 +212,8 @@ class NounExternal(NounBase):
       nsfw = self.nsfw,
       extension = self.extension,
       mimetype = self.mimetype,
-      aspect_width = self.aspect_width,
-      aspect_height = self.aspect_height)
+      aspect = self.aspect,
+      )
     if not created:
       return this_static
     temp_file = tempfile.NamedTemporaryFile(suffix = self.extension)
@@ -400,15 +397,13 @@ class SearchGoogle(Search):
         continue
       width = int(result['width'])
       height = int(result['height'])
-      aspect_gcd = gcd(width, height)
 
       new_image = NounExternal.objects.create(
         url = result['url'],
         width = width,
         height = height,
         noun = self.query,
-        aspect_width = width/aspect_gcd,
-        aspect_height = height/aspect_gcd,
+        aspec = float(width)/height,
         )
     return True
 
@@ -487,14 +482,12 @@ class SearchBing(Search):
         continue
       width = int(result['Width'])
       height = int(result['Height'])
-      aspect_gcd = gcd(width, height)
 
       new_imaged = NounExternal.objects.create(
         url = result['MediaUrl'],
         width = width,
         height = height,
         noun = self.query,
-        aspect_width = width/aspect_gcd,
-        aspect_height = height/aspect_gcd,
+        aspect = float(width)/height,
         )
     return True
