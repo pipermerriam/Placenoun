@@ -119,7 +119,7 @@ class NounExternal(NounBase):
     return "<NounExternal: %s>"%(self.id)
 
   @classmethod
-  def get_knn_window(cls, noun, slope, radius, limit = 30):
+  def get_knn_window(cls, noun, slope, radius, limit = 30, raw = False):
     left_bound = "(height-%s)/%s"%(radius, slope)
     right_bound = "(height+%s)/%s"%(radius, slope)
     top_bound = "width*%s+%s"%(slope, radius)
@@ -138,6 +138,8 @@ class NounExternal(NounBase):
      "LIMIT 0, %s"%limit,
      )
     sql_query = ' '.join(sql_statements)
+    if raw:
+      return sql_query
     return cls.objects.raw(sql_query)
     
   @classmethod
