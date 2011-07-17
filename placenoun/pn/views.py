@@ -11,6 +11,7 @@ except ImportError:
   from placenoun.numberutilities.main import gcd
 
 from placenoun.pn.models import NounStatic, NounExternal, SearchGoogle, SearchBing
+from placenoun.ga.ga import track_page_view
 
 MAX_IMAGE_WIDTH = settings.MAX_IMAGE_WIDTH
 MAX_IMAGE_HEIGHT = settings.MAX_IMAGE_HEIGHT
@@ -21,6 +22,13 @@ def index(request):
 
   context = RequestContext(request)
   return render_to_response(template, data, context)
+
+def detail(request, this_image):
+  template = 'debug.html'
+  data = {'image_source': this_image.image.path}
+
+  context = RequestContext(request)
+  return render_to_response(template, data, context, mimetype="application/xhtml+xml")
 
 def get_by_id(request, id):
   id = int(id)
@@ -92,7 +100,8 @@ def noun_static(request, noun, width, height):
       ret = this_image.http_image_resized(size=(width, height))
       return this_image.http_image_resized(size=(width, height))
 
-def noun(request, noun):
+def noun(request, noun, debug = False):
+  x = track_page_view(request.META)
   noun = noun.lstrip('+').rstrip('+')
   noun_query = NounExternal.objects.filter(noun = noun, status__lte = 30)
   if noun_query.exists():
@@ -101,6 +110,8 @@ def noun(request, noun):
       if not this_image.image:
         this_image.populate()
       if this_image.image:
+        if debug:
+          return detail(request, this_image)
         return this_image.http_image
 
   random.choice([SearchBing, SearchGoogle]).do_next_search(noun)
@@ -113,6 +124,8 @@ def noun(request, noun):
         this_image.populate()
       if not this_image.image:
         continue
+      if debug:
+        return detail(request, this_image)
       return this_image.http_image
     else:
       random.choice([SearchBing, SearchGoogle]).do_next_search(noun)

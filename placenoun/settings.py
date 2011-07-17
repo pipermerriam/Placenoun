@@ -7,8 +7,28 @@ ADMINS = (
     # ('Your Name', 'your_email@example.com'),
 )
 
+# Placenoun Specific imports
 MAX_IMAGE_WIDTH = 2048
 MAX_IMAGE_HEIGHT = 2048
+
+# Django Debug toolbar
+
+DEBUG_TOOLBAR_PANELS = (
+  'debug_toolbar.panels.version.VersionDebugPanel',
+  'debug_toolbar.panels.timer.TimerDebugPanel',
+  'debug_toolbar.panels.settings_vars.SettingsVarsDebugPanel',
+  'debug_toolbar.panels.headers.HeaderDebugPanel',
+  'debug_toolbar.panels.request_vars.RequestVarsDebugPanel',
+  'debug_toolbar.panels.template.TemplateDebugPanel',
+  'debug_toolbar.panels.sql.SQLDebugPanel',
+  'debug_toolbar.panels.signals.SignalDebugPanel',
+  'debug_toolbar.panels.logger.LoggingPanel',
+)
+
+try:
+  from site_settings import INTERNAL_IPS
+except ImportError:
+  INTERNAL_IPS = ('127.0.0.1',)
 
 MANAGERS = ADMINS
 
@@ -115,6 +135,7 @@ TEMPLATE_LOADERS = (
 )
 
 MIDDLEWARE_CLASSES = (
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -140,7 +161,9 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.messages',
     #'django.contrib.staticfiles',
-    'placenoun.pn'
+    'placenoun.pn',
+    # Django Debug Toolbar
+    'debug_toolbar',
     # Uncomment the next line to enable the admin:
     # 'django.contrib.admin',
     # Uncomment the next line to enable admin documentation:

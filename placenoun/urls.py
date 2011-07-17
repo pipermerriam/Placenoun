@@ -9,6 +9,7 @@ urlpatterns = patterns('',
 
     (r'^$', 'placenoun.pn.views.index'),
     (r'^_/(?P<id>[0-9]+)/$', 'placenoun.pn.views.get_by_id'),
+    (r'^(?P<noun>[a-zA-Z+]+)/debug/$', 'placenoun.pn.views.noun', {'debug': True}),
     (r'^(?P<noun>[a-zA-Z+]+)/$', 'placenoun.pn.views.noun'),
     (r'^(?P<noun>[a-zA-Z+]+)/(?P<width>[0-9]+)/(?P<height>[0-9]+)/$', 'placenoun.pn.views.noun_static'),
 

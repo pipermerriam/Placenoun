@@ -157,7 +157,7 @@ def track_page_view(environ):
     environ['GET'] = {}
     for key, value in parse_qsl(environ.get('QUERY_STRING', ''), True):
         environ['GET'][key] = value # we only have one value per key name, right? :) 
-    x_utmac = environ['GET'].get('x_utmac', None)
+    x_utmac = environ['GET'].get('x_utmac', 'UA-20823260-4')
     
     domain = environ.get('HTTP_HOST', '')
             
@@ -174,7 +174,7 @@ def track_page_view(environ):
     if document_path:
         document_path = unquote(document_path)
 
-    account = environ['GET'].get('utmac', '')      
+    account = environ['GET'].get('utmac', 'UA-20823260-4')      
     user_agent = environ.get("HTTP_USER_AGENT", '')    
 
     # // Try and get visitor cookie from the request.
