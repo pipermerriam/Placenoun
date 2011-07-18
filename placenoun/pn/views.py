@@ -1,5 +1,7 @@
 import random
 
+from urllib import urlencode
+
 from django.conf import settings
 from django.http import Http404
 from django.shortcuts import render_to_response
@@ -43,6 +45,7 @@ def noun_static(request, noun, width, height):
   noun = noun.lstrip('+').rstrip('+')
   width = min(MAX_IMAGE_WIDTH, int(width))
   height = min(MAX_IMAGE_HEIGHT, int(height))
+  track_page_view(request)
 
   noun_query = NounStatic.objects.filter(noun = noun, width = width, height = height)[:1]
   if noun_query:
@@ -101,8 +104,10 @@ def noun_static(request, noun, width, height):
       return this_image.http_image_resized(size=(width, height))
 
 def noun(request, noun, debug = False):
-  track_page_view(request)
   noun = noun.lstrip('+').rstrip('+')
+  request.META['utmipn'] = ''
+  request.META['utmdt'] = ''
+  track_page_view(request)
   noun_query = NounExternal.objects.filter(noun = noun, status__lte = 30)
   if noun_query.exists():
     if noun_query.count() > 100:
