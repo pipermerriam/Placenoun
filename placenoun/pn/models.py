@@ -8,6 +8,7 @@ import tempfile
 import shutil
 
 from PIL import Image, ImageFile
+from random import choice
 from math import log, sin, cos, tan, asin, acos, atan, pi
 
 from django.core.files import File
@@ -76,6 +77,13 @@ class NounBase(TimeStampable):
   @property
   def slug(self):
     return slugify(self.noun.replace('+',' '))
+
+  @classmethod
+  def get_random(cls, noun, status):
+    ids = cls.objects.filter(noun=noun, status__lte=status).values_list('id', flat=True)
+    this_id = choice(ids)
+    return cls.objects.get(pk=this_id)
+
 
   def compare(self, target_width, target_height):
     width = self.width

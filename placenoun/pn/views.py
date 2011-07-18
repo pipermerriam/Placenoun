@@ -6,7 +6,6 @@ from django.conf import settings
 from django.http import Http404
 from django.shortcuts import render_to_response
 from django.template import RequestContext
-from django.db import connection, transaction
 
 try:
   from fractions import gcd
@@ -113,10 +112,7 @@ def noun(request, noun, debug = False):
   if noun_query.exists():
     if noun_query.count() < 100:
       random.choice([SearchBing, SearchGoogle]).do_next_search(noun)
-    cursor = connection.cursor()
-    cursor.execute("SELECT FLOOR(RAND() * COUNT(*)) AS `offset` FROM `pn_nounexternal` WHERE (noun='%s' AND status<30)", noun)
-    offset = cursor.fetchone()[0]
-    this_image = NounExternal.objects.get(pk=offset)
+    this_image = NounExternal.get_random(noun, 30)
     if not this_image.image:
       this_image.populate()
     if this_image.image:
@@ -129,10 +125,7 @@ def noun(request, noun, debug = False):
   while True:
     noun_query = NounExternal.objects.filter(noun = noun, status__lte = 30)
     if noun_query.exists():
-      cursor = connection.cursor()
-      cursor.execute("SELECT FLOOR(RAND() * COUNT(*)) AS `offset` FROM `pn_nounexternal` WHERE (noun='%s' AND status<30)", noun)
-      offset = cursor.fetchone()[0]
-      this_image = NounExternal.objects.get(pk=offset)
+      this_image = NounExternal.get_random(noun, 30)
       if not this_image.image:
         this_image.populate()
       if not this_image.image:
