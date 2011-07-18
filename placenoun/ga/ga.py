@@ -116,13 +116,13 @@ def send_request_to_google_analytics(utm_url, environ):
     try:
         resp, content = http.request(utm_url, 
                                      "GET", 
-                                     headers={'User-Agent': environ.get('HTTP_USER_AGENT', 'Unknown'),
-                                              'Accepts-Language:': environ.get("HTTP_ACCEPT_LANGUAGE",'')}
+                                     headers={'User-Agent': environ.META.get('HTTP_USER_AGENT', 'Unknown'),
+                                              'Accepts-Language:': environ.META.get("HTTP_ACCEPT_LANGUAGE",'')}
                                      )
         # dbgMsg("success")            
     except HttpLib2Error, e:
         errMsg("fail: %s" % utm_url)            
-        if environ['GET'].get('utmdebug'):
+        if environ.GET.get('utmdebug'):
             raise Exception("Error opening: %s" % utm_url)
         else:
             pass
@@ -153,34 +153,31 @@ def track_page_view(environ):
     time_tup = time.localtime(time.time() + COOKIE_USER_PERSISTENCE)
     
     # set some useful items in environ: 
-    environ['COOKIES'] = parse_cookie(environ.get('HTTP_COOKIE', ''))
-    environ['GET'] = {}
-    for key, value in parse_qsl(environ.get('QUERY_STRING', ''), True):
-        environ['GET'][key] = value # we only have one value per key name, right? :) 
-    x_utmac = environ['GET'].get('x_utmac', 'UA-20823260-4')
+    #environ['COOKIES'] = parse_cookie(environ.get('HTTP_COOKIE', ''))
+    #environ['GET'] = {}
     
-    domain = environ.get('HTTP_HOST', '')
+    domain = environ.META.get('HTTP_HOST', '')
             
     # Get the referrer from the utmr parameter, this is the referrer to the
     # page that contains the tracking pixel, not the referrer for tracking
     # pixel.    
-    document_referer = environ['GET'].get("utmr", "")
+    document_referer = environ.META.get("HTTP_REFERER", "")
     if not document_referer or document_referer == "0":
         document_referer = "-"
     else:
         document_referer = unquote(document_referer)
 
-    document_path = environ['GET'].get('utmp', "")
+    document_path = environ.META.get('REQUEST_URI', "")
     if document_path:
         document_path = unquote(document_path)
 
-    account = environ['GET'].get('utmac', 'UA-20823260-4')      
-    user_agent = environ.get("HTTP_USER_AGENT", '')    
+    account = 'UA-20823260-4'      
+    user_agent = environ.META.get("HTTP_USER_AGENT", '')    
 
     # // Try and get visitor cookie from the request.
-    cookie = environ['COOKIES'].get(COOKIE_NAME)
+    cookie = environ.COOKIES.get(COOKIE_NAME)
 
-    visitor_id = get_visitor_id(environ.get("HTTP_X_DCMGUID", ''), account, user_agent, cookie)
+    visitor_id = get_visitor_id(environ.GET.get("HTTP_X_DCMGUID", ''), account, user_agent, cookie)
     
     # // Always try and add the cookie to the response.
     cookie = SimpleCookie()
@@ -191,7 +188,7 @@ def track_page_view(environ):
 
     utm_gif_location = "http://www.google-analytics.com/__utm.gif"
 
-    for utmac in [account, x_utmac]:
+    for utmac in [account, ]:
         if not utmac:
             continue # ignore empty utmacs
         # // Construct the gif hit url.
@@ -199,22 +196,22 @@ def track_page_view(environ):
                 "utmwv=" + VERSION + \
                 "&utmn=" + get_random_number() + \
                 "&utmhn=" + quote(domain) + \
-                "&utmsr=" + environ['GET'].get('utmsr', '') + \
-                "&utme=" + environ['GET'].get('utme', '') + \
+                "&utmsr=" + environ.GET.get('utmsr', '') + \
+                "&utme=" + environ.GET.get('utme', '') + \
                 "&utmr=" + quote(document_referer) + \
                 "&utmp=" + quote(document_path) + \
                 "&utmac=" + utmac + \
                 "&utmcc=__utma%3D999.999.999.999.999.1%3B" + \
                 "&utmvid=" + visitor_id + \
-                "&utmip=" + get_ip(environ.get("REMOTE_ADDR",''))
+                "&utmip=" + get_ip(environ.META.get("REMOTE_ADDR",''))
         # dbgMsg("utm_url: " + utm_url)    
         send_request_to_google_analytics(utm_url, environ)
 
     # // If the debug parameter is on, add a header to the response that contains
     # // the url that was used to contact Google Analytics.
     headers = [('Set-Cookie', str(cookie).split(': ')[1])]
-    if environ['GET'].get('utmdebug', False):
-        headers.append(('X-GA-MOBILE-URL', utm_url))
+    #if environ['GET'].get('utmdebug', False):
+        #headers.append(('X-GA-MOBILE-URL', utm_url))
     
     # Finally write the gif data to the response
     response = write_gif_data()

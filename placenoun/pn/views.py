@@ -25,7 +25,7 @@ def index(request):
 
 def detail(request, this_image):
   template = 'debug.html'
-  data = {'image_source': this_image.image.path}
+  data = {'image_source': this_image.image.url}
 
   context = RequestContext(request)
   return render_to_response(template, data, context, mimetype="application/xhtml+xml")
@@ -101,7 +101,7 @@ def noun_static(request, noun, width, height):
       return this_image.http_image_resized(size=(width, height))
 
 def noun(request, noun, debug = False):
-  x = track_page_view(request.META)
+  track_page_view(request)
   noun = noun.lstrip('+').rstrip('+')
   noun_query = NounExternal.objects.filter(noun = noun, status__lte = 30)
   if noun_query.exists():
