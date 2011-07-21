@@ -18,6 +18,20 @@ from placenoun.ga.ga import track_page_view
 MAX_IMAGE_WIDTH = settings.MAX_IMAGE_WIDTH
 MAX_IMAGE_HEIGHT = settings.MAX_IMAGE_HEIGHT
 
+hotshotProfilers = {}
+def hotshotit(func):
+    def wrapper(*args, **kw):
+        import hotshot
+        global hotshotProfilers
+        prof_name = func.func_name+".prof"
+        profiler = hotshotProfilers.get(prof_name)
+        if profiler is None:
+            profiler = hotshot.Profile(prof_name)
+            hotshotProfilers[prof_name] = profiler
+        return profiler.runcall(func, *args, **kw)
+    return wrapper
+
+@hotshotit
 def index(request):
   template = 'index.html'
   data = {}
@@ -41,6 +55,7 @@ def get_by_id(request, id):
     return Http404
   return this_image.http_image
 
+@hotshotit
 def noun_static(request, noun, width, height, debug = False):
   noun = noun.lstrip('+').rstrip('+')
   width = min(MAX_IMAGE_WIDTH, int(width))
@@ -111,6 +126,7 @@ def noun_static(request, noun, width, height, debug = False):
         return detail(request, this_image, (width, height))
       return this_image.http_image_resized(size=(width, height))
 
+@hotshotit
 def noun(request, noun, debug = False):
   noun = noun.lstrip('+').rstrip('+')
   request.META['utmipn'] = ''

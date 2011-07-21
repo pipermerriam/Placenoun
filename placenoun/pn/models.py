@@ -181,7 +181,7 @@ class NounExternal(NounBase):
     temp = tempfile.NamedTemporaryFile(suffix = extension)
     image_hasher = hashlib.sha256()
     while True:
-      buf = response.read(1024)
+      buf = response.read(8192)
       if buf:
         image_parser.feed(buf)
         temp.write(buf)
