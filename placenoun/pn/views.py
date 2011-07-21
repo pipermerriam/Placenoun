@@ -6,6 +6,7 @@ from django.conf import settings
 from django.http import Http404
 from django.shortcuts import render_to_response
 from django.template import RequestContext
+from django.db import connection, transaction
 
 try:
   from fractions import gcd
@@ -20,7 +21,17 @@ MAX_IMAGE_HEIGHT = settings.MAX_IMAGE_HEIGHT
 
 def index(request):
   template = 'index.html'
-  data = {}
+  while True:
+    cursor = connection.cursor()
+    cursor.execute("SELECT FLOOR(RAND() * COUNT(*)) AS `offset` FROM `pn_nounexternal`")
+    offset = cursor.fetchone()[0]
+    this_image = NounExternal.objects.get(pk=offset)
+    if not this_image.image:
+      this_image.populate()
+    if not this_image.status < 30:
+      continue
+    break
+  data = {'noun': this_image}
 
   context = RequestContext(request)
   return render_to_response(template, data, context)

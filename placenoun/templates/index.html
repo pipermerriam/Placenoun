@@ -30,6 +30,13 @@
       });
     });
     </script>
+    <style>
+      body { font-size: 32px; text-align: center; margin: 0 auto;}
+      input, label { padding: 10px; line-height: 1.1em; font-size: 1.1em; margin: 0 auto; text-transform: uppercase; width: 300px;}
+      form { margin-bottom: 20px; }
+      div.ljust { text-align: left; font-size: 18px; width: 700px; margin: 0 auto;}
+      li { list-style: none; }
+    </style>
   </head>
   <body>
     <div>
@@ -45,6 +52,15 @@
           <label for="search">Show me a</label>
           <input id="search" type="text">
         </form>
+        <div class="ljust">
+          <h3>Links like:</h3>
+          <ul>
+            <li>This: <a href="http://www.placenoun.com/{{ noun.noun }}/">http://www.placenoun.com/{{ noun.noun }}/</a></li>
+            <li>Or This: <a href="http://www.placenoun.com/{{ noun.noun }}/200/300/">http://www.placenoun.com/{{ noun.noun }}/200/300/</a></li>
+          </ul>
+          <p></p>
+        </div>
+        <img src="{{ noun.image.url }}" />
       </div>
       
       <div class="clear"></div>
