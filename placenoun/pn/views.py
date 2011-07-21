@@ -41,7 +41,7 @@ def get_by_id(request, id):
     return Http404
   return this_image.http_image
 
-def noun_static(request, noun, width, height):
+def noun_static(request, noun, width, height, debug = False):
   noun = noun.lstrip('+').rstrip('+')
   width = min(MAX_IMAGE_WIDTH, int(width))
   height = min(MAX_IMAGE_HEIGHT, int(height))
