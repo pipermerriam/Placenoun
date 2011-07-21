@@ -92,7 +92,7 @@ except ImportError:
 try:
   from site_settings import MEDIA_URL
 except ImportError:
-  MEDIA_URL = ''
+  MEDIA_URL = '/'
 
 # Absolute path to the directory static files should be collected to.
 # Don't put anything in this directory yourself; store your static files

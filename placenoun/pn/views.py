@@ -25,9 +25,9 @@ def index(request):
   context = RequestContext(request)
   return render_to_response(template, data, context)
 
-def detail(request, this_image):
+def detail(request, this_image, size = None):
   template = 'debug.html'
-  data = {'image_source': this_image.image.url}
+  data = {'noun': this_image}
 
   context = RequestContext(request)
   return render_to_response(template, data, context, mimetype="application/xhtml+xml")
@@ -50,6 +50,8 @@ def noun_static(request, noun, width, height):
   noun_query = NounStatic.objects.filter(noun = noun, width = width, height = height)[:1]
   if noun_query:
     this_image = noun_query.get()
+    if debug:
+      return detail(request, this_image)
     return this_image.http_image
 
   noun_query = NounExternal.objects.filter(noun = noun, width = width, height = height, status__lt = 20)
@@ -59,6 +61,8 @@ def noun_static(request, noun, width, height):
       this_image.populate()
     if this_image.status == 10:
       this_image = this_image.to_static()
+      if debug:
+        return detail(request, this_image)
       return this_image.http_image
 
   aspect = float(width)/height
@@ -69,6 +73,8 @@ def noun_static(request, noun, width, height):
       this_image.populate()
     if this_image.status == 10:
       this_image = this_image.to_static(size=(width, height))
+      if debug:
+        return detail(request, this_image)
       return this_image.http_image
 
 
@@ -101,6 +107,8 @@ def noun_static(request, noun, width, height):
       if not this_image.image:
         continue
       ret = this_image.http_image_resized(size=(width, height))
+      if debug:
+        return detail(request, this_image, (width, height))
       return this_image.http_image_resized(size=(width, height))
 
 def noun(request, noun, debug = False):

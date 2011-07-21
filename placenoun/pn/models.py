@@ -175,6 +175,8 @@ class NounExternal(NounBase):
       self.save()
       return False
     extension = mimetypes.guess_extension(mimetype)
+    if extension in ('.jpe', '.jpg') :
+      extension = '.jpeg'
     image_parser = ImageFile.Parser()
     temp = tempfile.NamedTemporaryFile(suffix = extension)
     image_hasher = hashlib.sha256()
@@ -186,8 +188,6 @@ class NounExternal(NounBase):
         image_hasher.update(buf)
         continue
       break
-    if extension in ('.jpe', '.jpg') :
-      extension = '.jpeg'
     try:
       new_image = image_parser.close()
     except IOError:
