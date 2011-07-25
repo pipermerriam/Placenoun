@@ -79,11 +79,24 @@ class NounBase(TimeStampable):
     return slugify(self.noun.replace('+',' '))
 
   @classmethod
-  def get_random(cls, noun, status):
+  def get_random_noun(cls, noun, status):
     ids = cls.objects.filter(noun=noun, status__lte=status).values_list('id', flat=True)
     this_id = choice(ids)
     return cls.objects.get(pk=this_id)
 
+  @classmethod
+  def get_random(cls)
+    while True:
+      cursor = connection.cursor()
+      cursor.execute("SELECT FLOOR(RAND() * COUNT(*)) AS `offset` FROM `pn_nounexternal`")
+      offset = cursor.fetchone()[0]
+      this_image = cls.objects.get(pk=offset)
+      if not this_image.image:
+        this_image.populate()
+      if not this_image.status < 30:
+        continue
+      break
+    return this_image
 
   def compare(self, target_width, target_height):
     width = self.width

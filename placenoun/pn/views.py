@@ -21,16 +21,7 @@ MAX_IMAGE_HEIGHT = settings.MAX_IMAGE_HEIGHT
 
 def index(request):
   template = 'index.html'
-  while True:
-    cursor = connection.cursor()
-    cursor.execute("SELECT FLOOR(RAND() * COUNT(*)) AS `offset` FROM `pn_nounexternal`")
-    offset = cursor.fetchone()[0]
-    this_image = NounExternal.objects.get(pk=offset)
-    if not this_image.image:
-      this_image.populate()
-    if not this_image.status < 30:
-      continue
-    break
+  this_image = NounExternal.get_random()
   data = {'noun': this_image}
 
   context = RequestContext(request)
@@ -124,14 +115,12 @@ def noun_static(request, noun, width, height, debug = False):
 
 def noun(request, noun, debug = False):
   noun = noun.lstrip('+').rstrip('+')
-  request.META['utmipn'] = ''
-  request.META['utmdt'] = ''
   track_page_view(request)
   noun_query = NounExternal.objects.filter(noun = noun, status__lte = 30)
   if noun_query.exists():
     if noun_query.count() < 100:
       random.choice([SearchBing, SearchGoogle]).do_next_search(noun)
-    this_image = NounExternal.get_random(noun, 30)
+    this_image = NounExternal.get_random_noun(noun, 30)
     if not this_image.image:
       this_image.populate()
     if this_image.image:
@@ -144,7 +133,7 @@ def noun(request, noun, debug = False):
   while True:
     noun_query = NounExternal.objects.filter(noun = noun, status__lte = 30)
     if noun_query.exists():
-      this_image = NounExternal.get_random(noun, 30)
+      this_image = NounExternal.get_random_noun(noun, 30)
       if not this_image.image:
         this_image.populate()
       if not this_image.image:
@@ -154,3 +143,18 @@ def noun(request, noun, debug = False):
       return this_image.http_image
     else:
       random.choice([SearchBing, SearchGoogle]).do_next_search(noun)
+
+def random_noun(request, width = None, height = None, debug = False):
+  noun = noun.lstrip('+').rstrip('+')
+  track_page_view(request)
+
+  if width and height:
+    nouns = NounExternal.objects.only('noun').distinct().values_list('noun', flat = True)
+    noun = random.choice(nouns)
+    return noun_static(request, noun, width, height, debug)
+  else:
+    this_image = NounExternal.get_random()
+    if debug:
+      return detail(requst, this_image)
+    return this_image.http_image
+
