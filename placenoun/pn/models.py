@@ -17,6 +17,7 @@ from django.db import models
 from django.http import HttpResponse, Http404
 from django.template.defaultfilters import slugify
 from django.db.models.signals import post_init, post_save
+from django.db import connection, transaction
 
 from placenoun.behaviors.models import *
 from placenoun.fileutilities.main import *
@@ -85,7 +86,7 @@ class NounBase(TimeStampable):
     return cls.objects.get(pk=this_id)
 
   @classmethod
-  def get_random(cls)
+  def get_random(cls):
     while True:
       cursor = connection.cursor()
       cursor.execute("SELECT FLOOR(RAND() * COUNT(*)) AS `offset` FROM `pn_nounexternal`")

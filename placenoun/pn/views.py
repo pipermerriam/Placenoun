@@ -6,7 +6,6 @@ from django.conf import settings
 from django.http import Http404
 from django.shortcuts import render_to_response
 from django.template import RequestContext
-from django.db import connection, transaction
 
 try:
   from fractions import gcd
@@ -145,7 +144,6 @@ def noun(request, noun, debug = False):
       random.choice([SearchBing, SearchGoogle]).do_next_search(noun)
 
 def random_noun(request, width = None, height = None, debug = False):
-  noun = noun.lstrip('+').rstrip('+')
   track_page_view(request)
 
   if width and height:
@@ -155,6 +153,6 @@ def random_noun(request, width = None, height = None, debug = False):
   else:
     this_image = NounExternal.get_random()
     if debug:
-      return detail(requst, this_image)
+      return detail(request, this_image)
     return this_image.http_image
 
