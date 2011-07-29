@@ -155,8 +155,8 @@ class NounExternal(NounBase):
     upper_y = arm_dist*sin(upper_theta)
     lower_x = arm_dist*cos(lower_theta)
     lower_y = arm_dist*sin(lower_theta)
-    lower_aspect = float(upper_x)/upper_y
-    upper_aspect = float(lower_x)/lower_y
+    lower_aspect = float(upper_x)/max(upper_y, 1)
+    upper_aspect = float(lower_x)/max(lower_y, 1)
 
     if raw:
       return lower_aspect, upper_aspect
