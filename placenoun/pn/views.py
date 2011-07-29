@@ -44,8 +44,8 @@ def get_by_id(request, id):
 
 def noun_static(request, noun, width, height, debug = False):
   noun = noun.lstrip('+').rstrip('+')
-  width = min(MAX_IMAGE_WIDTH, int(width))
-  height = min(MAX_IMAGE_HEIGHT, int(height))
+  width = max(min(MAX_IMAGE_WIDTH, int(width)), 1)
+  height = max(min(MAX_IMAGE_HEIGHT, int(height)), 1)
   track_page_view(request)
 
   noun_query = NounStatic.objects.filter(noun = noun, width = width, height = height)[:1]
